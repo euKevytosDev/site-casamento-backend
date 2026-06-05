@@ -1,0 +1,14 @@
+### Teste 1: Buscar todos os convidados (o nosso SELECT)
+GET http://localhost:8080/api/presenca
+
+###
+
+### Teste 2: Cadastrar um novo convidado (O nosso INSERT)
+POST http://localhost:8080/api/presenca
+Content-Type: application/json
+
+{
+  "nomeConvidado": "Rafaella (Noiva Maravilhosa)",
+  "idade": 21,
+  "confirmado": true
+}
