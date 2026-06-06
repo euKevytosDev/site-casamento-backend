@@ -24,9 +24,10 @@ public class PresencaCasamento {
     @Column(name = "confirmado", nullable = false)
     private Boolean confirmado;
 
-    // Conecta com a data de cadastro. O 'insertable = false' avisa ao Java para deixar o Postgres colocar a data sozinho
-    @Column(name = "data_cadastro", insertable = false, updatable = false)
-    private LocalDateTime dataCadastro;
+    // Conecta com a data de cadastro. O 'insertable = false' avisa ao Java para deixar o Postgres colocar a data sozinho.
+    // Porem mudei para true para o java enviar a data
+    @Column(name = "data_cadastro", insertable = true, updatable = false)
+    private LocalDateTime dataCadastro = LocalDateTime.now();
 
     // Construtor vazio (obrigatório Spring)
     public PresencaCasamento(){
