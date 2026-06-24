@@ -12,3 +12,75 @@ Content-Type: application/json
   "idade": 21,
   "confirmado": true
 }
+
+###
+
+### Presença - Buscar por ID
+GET http://localhost:8080/api/presenca/1
+
+###
+
+### Presença - Atualizar
+PUT http://localhost:8080/api/presenca/1
+Content-Type: application/json
+
+{
+  "nomeConvidado": "Rafaella atualizada",
+  "idade": 22,
+  "confirmado": true
+}
+
+###
+
+### Presença - Confirmar família (insert em massa)
+POST http://localhost:8080/api/presenca/confirmar-familia
+Content-Type: application/json
+
+[
+  {
+    "nomeConvidado": "João",
+    "idade": 30,
+    "confirmado": true
+  },
+  {
+    "nomeConvidado": "Maria",
+    "idade": 28,
+    "confirmado": true
+  }
+]
+
+###
+
+### Presença - Excluir
+DELETE http://localhost:8080/api/presenca/1
+
+###
+
+### Presentes - Listar todos
+GET http://localhost:8080/api/presentes
+
+###
+
+### Presentes - Buscar por ID
+GET http://localhost:8080/api/presentes/1
+
+###
+
+### Presentes - Cadastrar (upload de imagem)
+# Use o painel admin ou envie multipart/form-data:
+# nome, descricao, valor, imagem (arquivo)
+
+###
+
+### Presentes - Comprar
+POST http://localhost:8080/api/presentes/1/comprar
+Content-Type: application/json
+
+{
+  "nomeComprador": "Maria Silva"
+}
+
+###
+
+### Presentes - Excluir
+DELETE http://localhost:8080/api/presentes/1
