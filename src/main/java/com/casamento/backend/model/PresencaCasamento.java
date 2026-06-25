@@ -2,6 +2,7 @@ package com.casamento.backend.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Table(name = "presenca_casamento") // Avisa ao Java o nome EXATO da tabela que criamos no Postgres
@@ -13,8 +14,9 @@ public class PresencaCasamento {
     private Long id;
 
     // Conecta com a coluna 'nome_convidado' e diz que ela não pode ser vazia
+    @JsonProperty("nomeConvidado")
     @Column(name = "nome_convidado", nullable = false)
-    private String nome;
+    private String nomeConvidado;
 
     // Conecta com a coluna 'idade' (usamos Integer porque aceita números inteiros)
     @Column(name = "idade")
@@ -45,9 +47,9 @@ public class PresencaCasamento {
         this.id = id;
     }
 
-    public String getNome() { return nome; }
+    public String getNomeConvidado() { return nomeConvidado; }
 
-    public void setNome(String nome) { this.nome = nome; }
+    public void setNomeConvidado(String nomeConvidado) { this.nomeConvidado = nomeConvidado; }
 
     public Integer getIdade() {
         return idade;
