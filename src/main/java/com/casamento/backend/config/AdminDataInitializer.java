@@ -35,12 +35,12 @@ public class AdminDataInitializer implements CommandLineRunner {
             return;
         }
 
-        if (adminUsuarioRepository.count() > 0) {
-            return;
-        }
+        String login = defaultLogin.trim();
 
-        AdminUsuario admin = new AdminUsuario();
-        admin.setLogin(defaultLogin.trim());
+        AdminUsuario admin = adminUsuarioRepository.findByLogin(login)
+                .orElseGet(AdminUsuario::new);
+
+        admin.setLogin(login);
         admin.setSenhaHash(passwordEncoder.encode(defaultPassword));
         adminUsuarioRepository.save(admin);
     }
