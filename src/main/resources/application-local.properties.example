@@ -1,0 +1,14 @@
+# Copie este arquivo para application-local.properties e preencha os valores.
+# O arquivo application-local.properties NÃO deve ser commitado no Git.
+
+DB_URL=jdbc:postgresql://SEU_HOST/neondb?sslmode=require
+DB_USERNAME=seu_usuario
+DB_PASSWORD=sua_senha_aqui
+
+# Mínimo 32 caracteres — gere uma chave aleatória longa
+JWT_SECRET=gere_uma_chave_aleatoria_com_pelo_menos_32_caracteres
+
+ADMIN_LOGIN=admin
+ADMIN_PASSWORD=defina_uma_senha_forte_aqui
+
+JWT_EXPIRATION_HOURS=24
