@@ -5,8 +5,11 @@ import com.casamento.backend.repository.AdminUsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+
+import java.util.Arrays;
 
 @Component
 public class AdminDataInitializer implements CommandLineRunner {
@@ -17,19 +20,28 @@ public class AdminDataInitializer implements CommandLineRunner {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @Value("${admin.default-login:admin}")
+    @Autowired
+    private Environment environment;
+
+    @Value("${admin.default-login}")
     private String defaultLogin;
 
-    @Value("${admin.default-password:casamento2027}")
+    @Value("${admin.default-password}")
     private String defaultPassword;
 
     @Override
     public void run(String... args) {
-        if (adminUsuarioRepository.count() == 0) {
-            AdminUsuario admin = new AdminUsuario();
-            admin.setLogin(defaultLogin);
-            admin.setSenhaHash(passwordEncoder.encode(defaultPassword));
-            adminUsuarioRepository.save(admin);
+        if (Arrays.asList(environment.getActiveProfiles()).contains("test")) {
+            return;
         }
+
+        if (adminUsuarioRepository.count() > 0) {
+            return;
+        }
+
+        AdminUsuario admin = new AdminUsuario();
+        admin.setLogin(defaultLogin.trim());
+        admin.setSenhaHash(passwordEncoder.encode(defaultPassword));
+        adminUsuarioRepository.save(admin);
     }
 }

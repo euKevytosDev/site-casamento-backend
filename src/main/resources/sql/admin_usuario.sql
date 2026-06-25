@@ -5,5 +5,5 @@ CREATE TABLE IF NOT EXISTS public.admin_usuario (
     senha_hash  VARCHAR(255) NOT NULL
 );
 
--- Usuário padrão criado na 1ª execução: admin / casamento2027
--- Altere via variáveis ADMIN_LOGIN e ADMIN_PASSWORD no Render
+-- Usuário admin criado na 1ª execução se a tabela estiver vazia.
+-- Configure ADMIN_LOGIN e ADMIN_PASSWORD no Render (mín. 8 caracteres na senha).

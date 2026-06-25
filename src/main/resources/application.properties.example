@@ -1,0 +1,12 @@
+# Variáveis obrigatórias no Render (Environment)
+
+DB_URL=jdbc:postgresql://HOST/neondb?sslmode=require
+DB_USERNAME=
+DB_PASSWORD=
+
+JWT_SECRET=
+ADMIN_LOGIN=
+ADMIN_PASSWORD=
+
+# Opcional
+JWT_EXPIRATION_HOURS=24
