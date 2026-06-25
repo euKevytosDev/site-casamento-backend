@@ -17,8 +17,21 @@ public class JwtService {
     private final long expiracaoMs;
 
     public JwtService(
-            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.secret:}") String secret,
             @Value("${jwt.expiration-hours:24}") long expirationHours) {
+
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException(
+                    "JWT_SECRET não configurado. Adicione a variável JWT_SECRET no Render (mínimo 32 caracteres)."
+            );
+        }
+
+        if (secret.length() < 32) {
+            throw new IllegalStateException(
+                    "JWT_SECRET deve ter pelo menos 32 caracteres. Configure uma chave mais longa no Render."
+            );
+        }
+
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expiracaoMs = expirationHours * 60 * 60 * 1000;
     }
