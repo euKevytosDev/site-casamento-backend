@@ -11,7 +11,8 @@ import java.util.Arrays;
 public class SecretsValidator {
 
     private static final String[] SEGREDOS_OBRIGATORIOS = {
-            "DB_URL", "DB_USERNAME", "DB_PASSWORD", "JWT_SECRET", "ADMIN_LOGIN", "ADMIN_PASSWORD"
+            "DB_URL", "DB_USERNAME", "DB_PASSWORD", "JWT_SECRET", "ADMIN_LOGIN", "ADMIN_PASSWORD",
+            "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"
     };
 
     @Value("${jwt.secret:}")
