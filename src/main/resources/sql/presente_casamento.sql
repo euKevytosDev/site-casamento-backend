@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS presente_casamento (
     nome            VARCHAR(255)    NOT NULL,
     descricao       TEXT,
     valor           NUMERIC(10, 2)  NOT NULL,
-    imagem          VARCHAR(500)    NOT NULL,  -- caminho do upload: /uploads/presentes/arquivo.jpg
+    imagem          VARCHAR(500)    NOT NULL,  -- URL Cloudinary (https://res.cloudinary.com/...)
     comprado        BOOLEAN         NOT NULL DEFAULT FALSE,
     nome_comprador  VARCHAR(255),
     data_cadastro   TIMESTAMP       NOT NULL DEFAULT NOW()

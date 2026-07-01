@@ -12,3 +12,9 @@ ADMIN_LOGIN=admin
 ADMIN_PASSWORD=defina_uma_senha_forte_aqui
 
 JWT_EXPIRATION_HOURS=24
+
+# Cloudinary — imagens dos presentes (https://cloudinary.com)
+CLOUDINARY_CLOUD_NAME=seu_cloud_name
+CLOUDINARY_API_KEY=sua_api_key
+CLOUDINARY_API_SECRET=seu_api_secret
+CLOUDINARY_FOLDER=presentes-casamento

@@ -1,5 +1,8 @@
 package com.casamento.backend.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -7,7 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -18,34 +21,92 @@ public class FileStorageService {
             "image/jpeg", "image/png", "image/webp", "image/gif"
     );
 
-    private final Path uploadDir = Paths.get("uploads/presentes").toAbsolutePath().normalize();
+    private final Cloudinary cloudinary;
+    private final String pastaCloudinary;
+    private final Path uploadDirLegado = Paths.get("uploads/presentes").toAbsolutePath().normalize();
 
-    public FileStorageService() throws IOException {
-        Files.createDirectories(uploadDir);
+    public FileStorageService(
+            Cloudinary cloudinary,
+            @Value("${cloudinary.folder:presentes-casamento}") String pastaCloudinary) throws IOException {
+        this.cloudinary = cloudinary;
+        this.pastaCloudinary = pastaCloudinary;
+        Files.createDirectories(uploadDirLegado);
     }
 
     public String salvarImagem(MultipartFile arquivo) throws IOException {
         validarArquivo(arquivo);
 
-        String extensao = obterExtensao(arquivo.getOriginalFilename());
-        String nomeArquivo = UUID.randomUUID() + extensao;
-        Path destino = uploadDir.resolve(nomeArquivo);
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> resultado = cloudinary.uploader().upload(
+                    arquivo.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", pastaCloudinary,
+                            "public_id", UUID.randomUUID().toString(),
+                            "resource_type", "image"
+                    )
+            );
 
-        Files.copy(arquivo.getInputStream(), destino, StandardCopyOption.REPLACE_EXISTING);
-
-        return "/uploads/presentes/" + nomeArquivo;
+            return (String) resultado.get("secure_url");
+        } catch (Exception e) {
+            throw new IOException("Não foi possível enviar a imagem para a nuvem.", e);
+        }
     }
 
     public void excluirImagem(String caminho) {
-        if (caminho == null || !caminho.startsWith("/uploads/presentes/")) {
+        if (caminho == null || caminho.isBlank()) {
+            return;
+        }
+
+        if (caminho.startsWith("http")) {
+            excluirDaCloudinary(caminho);
+            return;
+        }
+
+        excluirArquivoLocal(caminho);
+    }
+
+    private void excluirDaCloudinary(String url) {
+        String publicId = extrairPublicId(url);
+        if (publicId == null) {
+            return;
+        }
+
+        try {
+            cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("resource_type", "image"));
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void excluirArquivoLocal(String caminho) {
+        if (!caminho.startsWith("/uploads/presentes/")) {
             return;
         }
 
         try {
             String nomeArquivo = caminho.substring("/uploads/presentes/".length());
-            Files.deleteIfExists(uploadDir.resolve(nomeArquivo));
+            Files.deleteIfExists(uploadDirLegado.resolve(nomeArquivo));
         } catch (IOException ignored) {
         }
+    }
+
+    private String extrairPublicId(String url) {
+        int indiceUpload = url.indexOf("/upload/");
+        if (indiceUpload == -1) {
+            return null;
+        }
+
+        String restante = url.substring(indiceUpload + "/upload/".length());
+        if (restante.matches("v\\d+/.*")) {
+            restante = restante.substring(restante.indexOf('/') + 1);
+        }
+
+        int ponto = restante.lastIndexOf('.');
+        if (ponto > 0) {
+            restante = restante.substring(0, ponto);
+        }
+
+        return restante.isBlank() ? null : restante;
     }
 
     private void validarArquivo(MultipartFile arquivo) {
@@ -57,12 +118,5 @@ public class FileStorageService {
         if (contentType == null || !TIPOS_PERMITIDOS.contains(contentType)) {
             throw new IllegalArgumentException("Formato inválido. Use JPG, PNG, WEBP ou GIF.");
         }
-    }
-
-    private String obterExtensao(String nomeOriginal) {
-        if (nomeOriginal != null && nomeOriginal.contains(".")) {
-            return nomeOriginal.substring(nomeOriginal.lastIndexOf('.')).toLowerCase();
-        }
-        return ".jpg";
     }
 }
