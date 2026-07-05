@@ -2,6 +2,7 @@ package com.casamento.backend.controller;
 
 import com.casamento.backend.dto.CompraCarrinhoRequest;
 import com.casamento.backend.dto.FinalizarCarrinhoResponse;
+import com.casamento.backend.dto.GerarPixResponse;
 import com.casamento.backend.model.PresenteCasamento;
 import com.casamento.backend.repository.PresenteRepository;
 import com.casamento.backend.service.PresenteService;
@@ -33,6 +34,16 @@ public class PresenteController {
         return presenteRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/gerar-pix")
+    public ResponseEntity<?> gerarPix(@RequestBody CompraCarrinhoRequest request) {
+        try {
+            GerarPixResponse resposta = presenteService.gerarPix(request);
+            return ResponseEntity.ok(resposta);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PostMapping("/finalizar-carrinho")
