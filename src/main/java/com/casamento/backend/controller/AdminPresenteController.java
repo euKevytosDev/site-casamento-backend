@@ -42,6 +42,7 @@ public class AdminPresenteController {
             @RequestParam String nome,
             @RequestParam(required = false) String descricao,
             @RequestParam BigDecimal valor,
+            @RequestParam(defaultValue = "10") Integer cotasTotal,
             @RequestParam("imagem") MultipartFile imagem) {
 
         try {
@@ -49,6 +50,8 @@ public class AdminPresenteController {
             presente.setNome(nome);
             presente.setDescricao(descricao);
             presente.setValor(valor);
+            presente.setCotasTotal(cotasTotal);
+            presente.setCotasVendidas(0);
             presente.setImagem(fileStorageService.salvarImagem(imagem));
             presente.setComprado(false);
             presente.setNomeComprador(null);
@@ -67,6 +70,7 @@ public class AdminPresenteController {
             @RequestParam String nome,
             @RequestParam(required = false) String descricao,
             @RequestParam BigDecimal valor,
+            @RequestParam Integer cotasTotal,
             @RequestParam(value = "imagem", required = false) MultipartFile imagem) {
 
         return presenteRepository.findById(id)
@@ -75,6 +79,8 @@ public class AdminPresenteController {
                         presente.setNome(nome);
                         presente.setDescricao(descricao);
                         presente.setValor(valor);
+                        presente.setCotasTotal(cotasTotal);
+                        presente.atualizarStatusComprado();
 
                         if (imagem != null && !imagem.isEmpty()) {
                             fileStorageService.excluirImagem(presente.getImagem());
@@ -96,6 +102,7 @@ public class AdminPresenteController {
         return presenteRepository.findById(id)
                 .map(presente -> {
                     presente.setComprado(false);
+                    presente.setCotasVendidas(0);
                     presente.setNomeComprador(null);
                     return ResponseEntity.ok(presenteRepository.save(presente));
                 })

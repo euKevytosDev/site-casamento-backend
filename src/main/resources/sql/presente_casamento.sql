@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS presente_casamento (
     valor           NUMERIC(10, 2)  NOT NULL,
     imagem          VARCHAR(500)    NOT NULL,  -- URL Cloudinary (https://res.cloudinary.com/...)
     comprado        BOOLEAN         NOT NULL DEFAULT FALSE,
+    cotas_total     INTEGER         NOT NULL DEFAULT 10,
+    cotas_vendidas  INTEGER         NOT NULL DEFAULT 0,
     nome_comprador  VARCHAR(255),
     data_cadastro   TIMESTAMP       NOT NULL DEFAULT NOW()
 );

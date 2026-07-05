@@ -1,7 +1,10 @@
 package com.casamento.backend.controller;
 
+import com.casamento.backend.dto.CompraCarrinhoRequest;
+import com.casamento.backend.dto.FinalizarCarrinhoResponse;
 import com.casamento.backend.model.PresenteCasamento;
 import com.casamento.backend.repository.PresenteRepository;
+import com.casamento.backend.service.PresenteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +20,9 @@ public class PresenteController {
     @Autowired
     private PresenteRepository presenteRepository;
 
+    @Autowired
+    private PresenteService presenteService;
+
     @GetMapping
     public List<PresenteCasamento> listarTodos() {
         return presenteRepository.findAll();
@@ -29,6 +35,16 @@ public class PresenteController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PostMapping("/finalizar-carrinho")
+    public ResponseEntity<?> finalizarCarrinho(@RequestBody CompraCarrinhoRequest request) {
+        try {
+            FinalizarCarrinhoResponse resposta = presenteService.finalizarCarrinho(request);
+            return ResponseEntity.ok(resposta);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @PostMapping("/{id}/comprar")
     public ResponseEntity<?> comprar(
             @PathVariable Long id,
@@ -36,16 +52,17 @@ public class PresenteController {
 
         return presenteRepository.findById(id)
                 .map(presente -> {
-                    if (Boolean.TRUE.equals(presente.getComprado())) {
+                    if (presente.getCotasDisponiveis() <= 0) {
                         return ResponseEntity.status(409)
-                                .body("Este presente já foi comprado.");
+                                .body("Não há mais cotas disponíveis para este item.");
                     }
                     String nomeComprador = body.get("nomeComprador");
                     if (nomeComprador == null || nomeComprador.isBlank()) {
                         return ResponseEntity.badRequest()
                                 .body("Informe o nome do comprador.");
                     }
-                    presente.setComprado(true);
+                    presente.setCotasVendidas(presente.getCotasVendidas() + 1);
+                    presente.atualizarStatusComprado();
                     presente.setNomeComprador(nomeComprador.trim());
                     return ResponseEntity.ok(presenteRepository.save(presente));
                 })

@@ -27,6 +27,12 @@ public class PresenteCasamento {
     @Column(nullable = false)
     private Boolean comprado = false;
 
+    @Column(name = "cotas_total", nullable = false)
+    private Integer cotasTotal = 10;
+
+    @Column(name = "cotas_vendidas", nullable = false)
+    private Integer cotasVendidas = 0;
+
     @Column(name = "nome_comprador")
     private String nomeComprador;
 
@@ -98,5 +104,34 @@ public class PresenteCasamento {
 
     public void setDataCadastro(LocalDateTime dataCadastro) {
         this.dataCadastro = dataCadastro;
+    }
+
+    public Integer getCotasTotal() {
+        return cotasTotal;
+    }
+
+    public void setCotasTotal(Integer cotasTotal) {
+        this.cotasTotal = cotasTotal != null && cotasTotal > 0 ? cotasTotal : 1;
+    }
+
+    public Integer getCotasVendidas() {
+        return cotasVendidas;
+    }
+
+    public void setCotasVendidas(Integer cotasVendidas) {
+        this.cotasVendidas = cotasVendidas != null && cotasVendidas >= 0 ? cotasVendidas : 0;
+    }
+
+    public int getCotasDisponiveis() {
+        if (Boolean.TRUE.equals(comprado) && (cotasVendidas == null || cotasVendidas == 0)) {
+            return 0;
+        }
+        int total = cotasTotal != null ? cotasTotal : 1;
+        int vendidas = cotasVendidas != null ? cotasVendidas : 0;
+        return Math.max(0, total - vendidas);
+    }
+
+    public void atualizarStatusComprado() {
+        this.comprado = getCotasDisponiveis() <= 0;
     }
 }
