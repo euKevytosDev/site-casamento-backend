@@ -3,7 +3,9 @@ package com.casamento.backend.service;
 import com.casamento.backend.dto.CompraCarrinhoRequest;
 import com.casamento.backend.dto.FinalizarCarrinhoResponse;
 import com.casamento.backend.dto.GerarPixResponse;
+import com.casamento.backend.model.HistoricoCompraCota;
 import com.casamento.backend.model.PresenteCasamento;
+import com.casamento.backend.repository.HistoricoCompraRepository;
 import com.casamento.backend.repository.PresenteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,9 @@ public class PresenteService {
 
     @Autowired
     private PresenteRepository presenteRepository;
+
+    @Autowired
+    private HistoricoCompraRepository historicoCompraRepository;
 
     @Autowired
     private PixPayloadService pixPayloadService;
@@ -117,10 +122,22 @@ public class PresenteService {
             presente.atualizarStatusComprado();
             presente.setNomeComprador(nomeComprador);
             presenteRepository.save(presente);
+            registrarHistorico(presente, nomeComprador, quantidade);
 
             total = total.add(presente.getValor().multiply(BigDecimal.valueOf(quantidade)));
         }
 
         return total;
+    }
+
+    private void registrarHistorico(PresenteCasamento presente, String nomeComprador, int quantidade) {
+        HistoricoCompraCota historico = new HistoricoCompraCota();
+        historico.setPresenteId(presente.getId());
+        historico.setNomePresente(presente.getNome());
+        historico.setNomeComprador(nomeComprador);
+        historico.setQuantidade(quantidade);
+        historico.setValorCota(presente.getValor());
+        historico.setValorTotal(presente.getValor().multiply(BigDecimal.valueOf(quantidade)));
+        historicoCompraRepository.save(historico);
     }
 }
