@@ -1,6 +1,8 @@
 package com.casamento.backend.controller;
 
+import com.casamento.backend.config.SiteContext;
 import com.casamento.backend.model.PresenteCasamento;
+import com.casamento.backend.model.Site;
 import com.casamento.backend.repository.PresenteRepository;
 import com.casamento.backend.service.FileStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +14,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/presentes")
@@ -25,14 +26,37 @@ public class AdminPresenteController {
     @Autowired
     private FileStorageService fileStorageService;
 
+    private Site siteAtual() {
+        return SiteContext.get();
+    }
+
+    private ResponseEntity<?> semSite() {
+        return ResponseEntity.badRequest()
+                .body("Informe o header X-Site-Id com o slug do casamento (ex: rafaekevin).");
+    }
+
+    private boolean pertenceAoSite(PresenteCasamento presente, Site site) {
+        return presente.getSite() != null && site.getId().equals(presente.getSite().getId());
+    }
+
     @GetMapping
-    public List<PresenteCasamento> listarTodos() {
-        return presenteRepository.findAll();
+    public ResponseEntity<?> listarTodos() {
+        Site site = siteAtual();
+        if (site == null) {
+            return semSite();
+        }
+        return ResponseEntity.ok(presenteRepository.findBySiteId(site.getId()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PresenteCasamento> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<?> buscarPorId(@PathVariable Long id) {
+        Site site = siteAtual();
+        if (site == null) {
+            return semSite();
+        }
+
         return presenteRepository.findById(id)
+                .filter(p -> pertenceAoSite(p, site))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -45,8 +69,14 @@ public class AdminPresenteController {
             @RequestParam(defaultValue = "10") Integer cotasTotal,
             @RequestParam("imagem") MultipartFile imagem) {
 
+        Site site = siteAtual();
+        if (site == null) {
+            return semSite();
+        }
+
         try {
             PresenteCasamento presente = new PresenteCasamento();
+            presente.setSite(site);
             presente.setNome(nome);
             presente.setDescricao(descricao);
             presente.setValor(valor);
@@ -73,7 +103,13 @@ public class AdminPresenteController {
             @RequestParam Integer cotasTotal,
             @RequestParam(value = "imagem", required = false) MultipartFile imagem) {
 
+        Site site = siteAtual();
+        if (site == null) {
+            return semSite();
+        }
+
         return presenteRepository.findById(id)
+                .filter(p -> pertenceAoSite(p, site))
                 .map(presente -> {
                     try {
                         presente.setNome(nome);
@@ -99,7 +135,13 @@ public class AdminPresenteController {
 
     @PatchMapping("/{id}/liberar")
     public ResponseEntity<?> liberar(@PathVariable Long id) {
+        Site site = siteAtual();
+        if (site == null) {
+            return semSite();
+        }
+
         return presenteRepository.findById(id)
+                .filter(p -> pertenceAoSite(p, site))
                 .map(presente -> {
                     presente.setComprado(false);
                     presente.setCotasVendidas(0);
@@ -110,12 +152,18 @@ public class AdminPresenteController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(@PathVariable Long id) {
+    public ResponseEntity<?> excluir(@PathVariable Long id) {
+        Site site = siteAtual();
+        if (site == null) {
+            return semSite();
+        }
+
         return presenteRepository.findById(id)
+                .filter(p -> pertenceAoSite(p, site))
                 .map(presente -> {
                     fileStorageService.excluirImagem(presente.getImagem());
                     presenteRepository.delete(presente);
-                    return ResponseEntity.noContent().<Void>build();
+                    return ResponseEntity.noContent().build();
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

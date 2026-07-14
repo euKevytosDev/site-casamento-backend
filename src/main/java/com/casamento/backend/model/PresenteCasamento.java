@@ -4,9 +4,18 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+
+
 @Entity
 @Table(name = "presente_casamento")
 public class PresenteCasamento {
+
+    // Liga o presente a um Site (casamento).
+    // optional = true: presentes antigos ainda podem estar sem site_id.
+    // Depois do seed, podemos exigir site (optional = false).
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "site_id")
+    private Site site;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,6 +49,14 @@ public class PresenteCasamento {
     private LocalDateTime dataCadastro = LocalDateTime.now();
 
     public PresenteCasamento() {
+    }
+
+    public Site getSite() {
+        return site;
+    }
+
+    public void setSite(Site site) {
+        this.site = site;
     }
 
     public Long getId() {

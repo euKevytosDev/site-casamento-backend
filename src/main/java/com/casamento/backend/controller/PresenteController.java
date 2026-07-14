@@ -1,16 +1,17 @@
 package com.casamento.backend.controller;
 
+import com.casamento.backend.config.SiteContext;
 import com.casamento.backend.dto.CompraCarrinhoRequest;
 import com.casamento.backend.dto.FinalizarCarrinhoResponse;
 import com.casamento.backend.dto.GerarPixResponse;
 import com.casamento.backend.model.PresenteCasamento;
+import com.casamento.backend.model.Site;
 import com.casamento.backend.repository.PresenteRepository;
 import com.casamento.backend.service.PresenteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -24,14 +25,37 @@ public class PresenteController {
     @Autowired
     private PresenteService presenteService;
 
+    /**
+     * Pega o Site que o SiteFilter guardou a partir do header X-Site-Id.
+     * Se não veio header / slug inválido → null.
+     */
+    private Site siteAtual() {
+        return SiteContext.get();
+    }
+
     @GetMapping
-    public List<PresenteCasamento> listarTodos() {
-        return presenteRepository.findAll();
+    public ResponseEntity<?> listarTodos() {
+        Site site = siteAtual();
+        // Sem site identificado, não devolvemos a lista global (evitar misturar casamentos)
+        if (site == null) {
+            return ResponseEntity.badRequest()
+                    .body("Informe o header X-Site-Id com o slug do casamento (ex: rafaekevin).");
+        }
+        // Só presentes DESTE casamento
+        return ResponseEntity.ok(presenteRepository.findBySiteId(site.getId()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PresenteCasamento> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<?> buscarPorId(@PathVariable Long id) {
+        Site site = siteAtual();
+        if (site == null) {
+            return ResponseEntity.badRequest()
+                    .body("Informe o header X-Site-Id com o slug do casamento.");
+        }
+
         return presenteRepository.findById(id)
+                // Só devolve se o presente pertencer ao site do header
+                .filter(p -> p.getSite() != null && site.getId().equals(p.getSite().getId()))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -61,7 +85,14 @@ public class PresenteController {
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {
 
+        Site site = siteAtual();
+        if (site == null) {
+            return ResponseEntity.badRequest()
+                    .body("Informe o header X-Site-Id com o slug do casamento.");
+        }
+
         return presenteRepository.findById(id)
+                .filter(p -> p.getSite() != null && site.getId().equals(p.getSite().getId()))
                 .map(presente -> {
                     if (presente.getCotasDisponiveis() <= 0) {
                         return ResponseEntity.status(409)

@@ -26,6 +26,9 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
 
+    @Autowired
+    private SiteFilter siteFilter;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -50,6 +53,8 @@ public class SecurityConfig {
                             response.getWriter().write("{\"error\":\"Sessão expirada ou não autenticado. Faça login novamente.\"}");
                         })
                 )
+                // Site primeiro (define o casamento), depois JWT (login admin)
+                .addFilterBefore(siteFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

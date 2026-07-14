@@ -9,6 +9,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class PresencaCasamento {
 
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "site_id")
+    private Site site;
+
     @Id // Diz que este campo é a chave primária (o identificador único)
     @GeneratedValue(strategy = GenerationType.IDENTITY) // Avisa que o banco gera o número sozinho (nosso Serial)
     private Long id;
@@ -38,6 +42,15 @@ public class PresencaCasamento {
 
     // abaixo metodos getters and setters (Os "porteiros" da classe)
     // O Java precisa deles para ler (Get) e gravar (Set) as informações dentro de cada campo.
+
+
+    public Site getSite() {
+        return site;
+    }
+
+    public void setSite(Site site) {
+        this.site = site;
+    }
 
     public Long getId() {
         return id;

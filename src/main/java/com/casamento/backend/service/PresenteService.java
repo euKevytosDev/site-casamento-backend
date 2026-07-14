@@ -1,10 +1,12 @@
 package com.casamento.backend.service;
 
+import com.casamento.backend.config.SiteContext;
 import com.casamento.backend.dto.CompraCarrinhoRequest;
 import com.casamento.backend.dto.FinalizarCarrinhoResponse;
 import com.casamento.backend.dto.GerarPixResponse;
 import com.casamento.backend.model.HistoricoCompraCota;
 import com.casamento.backend.model.PresenteCasamento;
+import com.casamento.backend.model.Site;
 import com.casamento.backend.repository.HistoricoCompraRepository;
 import com.casamento.backend.repository.PresenteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,7 @@ public class PresenteService {
     private PixPayloadService pixPayloadService;
 
     public GerarPixResponse gerarPix(CompraCarrinhoRequest request) {
+        exigirSiteAtual();
         BigDecimal total = calcularTotalSemReservar(request.getItens());
         String txid = pixPayloadService.gerarTxid();
         String pixCopiaCola = pixPayloadService.gerarPayload(total, txid);
@@ -42,6 +45,8 @@ public class PresenteService {
 
     @Transactional
     public FinalizarCarrinhoResponse finalizarCarrinho(CompraCarrinhoRequest request) {
+        exigirSiteAtual();
+
         if (request.getNomeComprador() == null || request.getNomeComprador().isBlank()) {
             throw new IllegalArgumentException("Informe o nome do comprador.");
         }
@@ -53,6 +58,28 @@ public class PresenteService {
                 total,
                 "Obrigado pelo carinho! Suas cotas foram confirmadas com sucesso."
         );
+    }
+
+    private Site exigirSiteAtual() {
+        Site site = SiteContext.get();
+        if (site == null) {
+            throw new IllegalArgumentException(
+                    "Informe o header X-Site-Id com o slug do casamento (ex: rafaekevin)."
+            );
+        }
+        return site;
+    }
+
+    /** Só aceita presentes do casamento do header X-Site-Id. */
+    private PresenteCasamento buscarPresenteDoSite(Long id) {
+        Site site = exigirSiteAtual();
+        PresenteCasamento presente = presenteRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Presente não encontrado."));
+
+        if (presente.getSite() == null || !site.getId().equals(presente.getSite().getId())) {
+            throw new IllegalArgumentException("Presente não pertence a este casamento.");
+        }
+        return presente;
     }
 
     private Map<Long, Integer> agruparItens(java.util.List<CompraCarrinhoRequest.ItemCarrinho> itens) {
@@ -84,8 +111,7 @@ public class PresenteService {
         BigDecimal total = BigDecimal.ZERO;
 
         for (Map.Entry<Long, Integer> entrada : quantidadePorPresente.entrySet()) {
-            PresenteCasamento presente = presenteRepository.findById(entrada.getKey())
-                    .orElseThrow(() -> new IllegalArgumentException("Presente não encontrado."));
+            PresenteCasamento presente = buscarPresenteDoSite(entrada.getKey());
 
             int quantidade = entrada.getValue();
             int disponiveis = presente.getCotasDisponiveis();
@@ -106,8 +132,7 @@ public class PresenteService {
         BigDecimal total = BigDecimal.ZERO;
 
         for (Map.Entry<Long, Integer> entrada : quantidadePorPresente.entrySet()) {
-            PresenteCasamento presente = presenteRepository.findById(entrada.getKey())
-                    .orElseThrow(() -> new IllegalArgumentException("Presente não encontrado."));
+            PresenteCasamento presente = buscarPresenteDoSite(entrada.getKey());
 
             int quantidade = entrada.getValue();
             int disponiveis = presente.getCotasDisponiveis();
