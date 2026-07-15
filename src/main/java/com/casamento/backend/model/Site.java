@@ -41,11 +41,51 @@ public class Site {
     @Column(nullable = false)
     private boolean ativo = true;
 
+    // Chave PIX deste casal (CPF, e-mail, telefone ou chave aleatória)
+    @Column(name = "pix_chave")
+    private String pixChave;
+
+    // Nome que aparece no PIX (quem recebe)
+    @Column(name = "pix_nome_recebedor")
+    private String pixNomeRecebedor;
+
+    // Cidade do recebedor (padrão do QR Code PIX)
+    @Column(name = "pix_cidade")
+    private String pixCidade;
+
+
+
+
     // Construtor vazio: o Spring/JPA precisa dele para criar o objeto
     public Site() {
     }
 
     // --- Getters e setters: o Java lê (get) e grava (set) cada campo ---
+
+
+    public String getPixChave() {
+        return pixChave;
+    }
+
+    public void setPixChave(String pixChave) {
+        this.pixChave = pixChave;
+    }
+
+    public String getPixNomeRecebedor() {
+        return pixNomeRecebedor;
+    }
+
+    public void setPixNomeRecebedor(String pixNomeRecebedor) {
+        this.pixNomeRecebedor = pixNomeRecebedor;
+    }
+
+    public String getPixCidade() {
+        return pixCidade;
+    }
+
+    public void setPixCidade(String pixCidade) {
+        this.pixCidade = pixCidade;
+    }
 
     public Long getId() {
         return id;

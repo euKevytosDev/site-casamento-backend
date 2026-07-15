@@ -69,6 +69,10 @@ public class AdminSiteController {
         String nomeNoivo = asString(body.get("nomeNoivo"));
         LocalDate dataCasamento = parseData(body.get("dataCasamento"));
 
+        String pixChave = asString(body.get("pixChave"));
+        String pixNomeRecebedor = asString(body.get("pixNomeRecebedor"));
+        String pixCidade = asString(body.get("pixCidade"));
+
         // 2) Validações básicas (se faltar algo importante, devolve 400)
         if (slug.isBlank()) {
             return ResponseEntity.badRequest()
@@ -93,6 +97,10 @@ public class AdminSiteController {
         site.setNomeNoivo(nomeNoivo);
         site.setDataCasamento(dataCasamento);
         site.setAtivo(true); // começa ligado
+
+        site.setPixChave(pixChave.isBlank() ? null : pixChave);
+        site.setPixNomeRecebedor(pixNomeRecebedor.isBlank() ? null : pixNomeRecebedor);
+        site.setPixCidade(pixCidade.isBlank() ? null : pixCidade);
 
         // 5) save() grava no Postgres e devolve o Site já com id gerado
         Site salvo = siteRepository.save(site);

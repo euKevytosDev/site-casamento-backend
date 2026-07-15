@@ -1,5 +1,7 @@
 package com.casamento.backend.service;
 
+import com.casamento.backend.config.SiteContext;
+import com.casamento.backend.model.Site;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +18,7 @@ public class PixPayloadService {
 
     private static final Pattern NAO_ASCII = Pattern.compile("[^a-zA-Z0-9 ]");
 
+    /** PIX global do servidor (fallback se o Site não tiver chave). */
     private final String chavePix;
     private final String nomeRecebedor;
     private final String cidadeRecebedor;
@@ -30,25 +33,79 @@ public class PixPayloadService {
     }
 
     public boolean isConfigurado() {
+        Site site = SiteContext.get();
+        if (site != null && site.getPixChave() != null && !site.getPixChave().isBlank()) {
+            return true;
+        }
         return !chavePix.isBlank();
     }
 
+    /**
+     * Monta o texto do PIX Copia e Cola (QR Code).
+     *
+     * valor = quanto a pessoa vai pagar
+     * txid  = um código interno da compra (tipo um "número do pedido")
+     *
+     * De onde vem a chave PIX?
+     * 1) Primeiro tenta do Site do casamento (header X-Site-Id)
+     * 2) Se o Site não tiver PIX cadastrado, usa o PIX global do servidor
+     */
     public String gerarPayload(BigDecimal valor, String txid) {
-        if (!isConfigurado()) {
-            throw new IllegalStateException("PIX não configurado no servidor.");
+
+        // PARTE A — Descobrir QUAL chave PIX usar
+        Site site = SiteContext.get();
+
+        String chave;
+        String nome;
+        String cidade;
+
+        if (site != null
+                && site.getPixChave() != null
+                && !site.getPixChave().isBlank()) {
+
+            chave = site.getPixChave().trim();
+
+            if (site.getPixNomeRecebedor() != null
+                    && !site.getPixNomeRecebedor().isBlank()) {
+                nome = site.getPixNomeRecebedor();
+            } else {
+                nome = "Casamento";
+            }
+
+            if (site.getPixCidade() != null
+                    && !site.getPixCidade().isBlank()) {
+                cidade = site.getPixCidade();
+            } else {
+                cidade = "Brasil";
+            }
+
+        } else if (!chavePix.isBlank()) {
+
+            chave = chavePix;
+            nome = nomeRecebedor;
+            cidade = cidadeRecebedor;
+
+        } else {
+            throw new IllegalStateException(
+                    "PIX não configurado para este casamento."
+            );
         }
+
+        // PARTE B — Validar o valor
         if (valor == null || valor.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Valor do PIX inválido.");
         }
 
+        // PARTE C — Formatar textos no padrão do Banco Central
         String referencia = normalizarTxid(txid);
-        String nome = sanitizarEmv(nomeRecebedor, 25);
-        String cidade = sanitizarEmv(cidadeRecebedor, 15);
+        nome = sanitizarEmv(nome, 25);
+        cidade = sanitizarEmv(cidade, 15);
         String valorFormatado = formatarValor(valor);
 
+        // PARTE D — Montar blocos do código PIX
         String gui = campo("00", "BR.GOV.BCB.PIX");
-        String chave = campo("01", chavePix);
-        String contaPix = campo("26", gui + chave);
+        String chaveCampo = campo("01", chave);
+        String contaPix = campo("26", gui + chaveCampo);
 
         StringBuilder payload = new StringBuilder();
         payload.append(campo("00", "01"));
@@ -61,6 +118,7 @@ public class PixPayloadService {
         payload.append(campo("60", cidade));
         payload.append(campo("62", campo("05", referencia)));
 
+        // PARTE E — CRC16 (checksum)
         String semCrc = payload + "6304";
         return semCrc + calcularCrc16(semCrc);
     }
