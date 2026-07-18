@@ -146,13 +146,22 @@ public class AdminSitePersonalizacaoController {
         }
 
         String tipoNorm = tipo == null ? "" : tipo.trim().toLowerCase();
-        if (!List.of("hero", "secundaria", "local", "carrossel").contains(tipoNorm)) {
+        if (!List.of("hero", "secundaria", "local", "carrossel", "musica").contains(tipoNorm)) {
             return ResponseEntity.badRequest()
-                    .body("tipo inválido. Use: hero, secundaria, local ou carrossel.");
+                    .body("tipo inválido. Use: hero, secundaria, local, carrossel ou musica.");
         }
 
         try {
             String pasta = "site-" + site.getSlug();
+
+            if ("musica".equals(tipoNorm)) {
+                String url = fileStorageService.salvarAudio(arquivo, pasta + "/musicas");
+                trocarAudio(site.getMusicaUrl(), url);
+                site.setMusicaUrl(url);
+                Site salvo = siteRepository.save(site);
+                return ResponseEntity.ok(siteConfigService.toResponse(salvo));
+            }
+
             String url = fileStorageService.salvarImagem(arquivo, pasta);
 
             switch (tipoNorm) {
@@ -188,7 +197,8 @@ public class AdminSitePersonalizacaoController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Falha ao enviar a imagem.");
+            String msg = e.getMessage() != null ? e.getMessage() : "Falha ao enviar o arquivo.";
+            return ResponseEntity.internalServerError().body(msg);
         }
     }
 
@@ -215,6 +225,12 @@ public class AdminSitePersonalizacaoController {
     private void trocarUrl(String antiga, String nova) {
         if (antiga != null && !antiga.isBlank() && !antiga.equals(nova)) {
             fileStorageService.excluirImagem(antiga);
+        }
+    }
+
+    private void trocarAudio(String antiga, String nova) {
+        if (antiga != null && !antiga.isBlank() && !antiga.equals(nova) && antiga.startsWith("http")) {
+            fileStorageService.excluirAudio(antiga);
         }
     }
 
