@@ -24,14 +24,11 @@ PIX_CHAVE=sua_chave_pix
 PIX_NOME_RECEBEDOR=Maria e Joao
 PIX_CIDADE=Sao Paulo
 
-# Mercado Pago — criação (R$ 99) + mensalidade (R$ 49,90)
-# Token de PRODUÇÃO ou TESTE em https://www.mercadopago.com.br/developers
-# Na aplicação MP, ative também o produto Assinaturas (além do Checkout Pro).
+# Mercado Pago — plano único mensal (Assinaturas)
+# Na aplicação MP, ative o produto Assinaturas.
 MERCADOPAGO_ACCESS_TOKEN=
-# Webhook (URL pública do Render):
 MERCADOPAGO_NOTIFICATION_URL=https://SEU-BACKEND.onrender.com/api/webhooks/mercadopago
-# Para onde voltar depois do pagamento:
 MERCADOPAGO_BACK_URL_SUCCESS=https://eukevytosdev.github.io/site-casamento-landing/sucesso.html
 MERCADOPAGO_BACK_URL_FAILURE=https://eukevytosdev.github.io/site-casamento-landing/
-MERCADOPAGO_VALOR_CRIACAO=99.00
-MERCADOPAGO_VALOR_MENSAL=49.90
+MERCADOPAGO_VALOR_MENSAL=59.90
+MERCADOPAGO_PERMANENCIA_MINIMA_MESES=6

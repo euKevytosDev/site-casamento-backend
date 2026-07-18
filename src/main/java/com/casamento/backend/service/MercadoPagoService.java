@@ -8,15 +8,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
- * Integração Mercado Pago:
- * - Checkout Pro: taxa de criação (R$ 99)
- * - Preapproval: mensalidade (R$ 49,90) a partir do 2º mês
+ * Integração Mercado Pago — plano único recorrente (Assinaturas / preapproval).
  */
 @Service
 public class MercadoPagoService {
@@ -27,8 +23,8 @@ public class MercadoPagoService {
     private final String notificationUrl;
     private final String backUrlSuccess;
     private final String backUrlFailure;
-    private final BigDecimal valorCriacao;
     private final BigDecimal valorMensal;
+    private final int permanenciaMinimaMeses;
     private final String preapprovalPlanIdConfigurado;
     private volatile String preapprovalPlanIdCache;
 
@@ -38,16 +34,16 @@ public class MercadoPagoService {
             @Value("${mercadopago.notification-url:}") String notificationUrl,
             @Value("${mercadopago.back-url-success:}") String backUrlSuccess,
             @Value("${mercadopago.back-url-failure:}") String backUrlFailure,
-            @Value("${mercadopago.valor-criacao:99.00}") BigDecimal valorCriacao,
-            @Value("${mercadopago.valor-mensal:49.90}") BigDecimal valorMensal,
+            @Value("${mercadopago.valor-mensal:59.90}") BigDecimal valorMensal,
+            @Value("${mercadopago.permanencia-minima-meses:6}") int permanenciaMinimaMeses,
             @Value("${mercadopago.preapproval-plan-id:}") String preapprovalPlanId) {
         this.objectMapper = objectMapper;
         this.accessToken = accessToken == null ? "" : accessToken.trim();
         this.notificationUrl = notificationUrl == null ? "" : notificationUrl.trim();
         this.backUrlSuccess = backUrlSuccess == null ? "" : backUrlSuccess.trim();
         this.backUrlFailure = backUrlFailure == null ? "" : backUrlFailure.trim();
-        this.valorCriacao = valorCriacao;
         this.valorMensal = valorMensal;
+        this.permanenciaMinimaMeses = permanenciaMinimaMeses;
         this.preapprovalPlanIdConfigurado = preapprovalPlanId == null ? "" : preapprovalPlanId.trim();
         this.restClient = RestClient.builder()
                 .baseUrl("https://api.mercadopago.com")
@@ -58,175 +54,116 @@ public class MercadoPagoService {
         return !accessToken.isBlank();
     }
 
-    public BigDecimal getValorCriacao() {
-        return valorCriacao;
-    }
-
     public BigDecimal getValorMensal() {
         return valorMensal;
     }
 
+    public int getPermanenciaMinimaMeses() {
+        return permanenciaMinimaMeses;
+    }
+
+    public String getBackUrlSuccess() {
+        return backUrlSuccess;
+    }
+
     /**
-     * Preferência Checkout Pro — taxa de R$ 99 (criação + 1º mês).
+     * Cria assinatura pending (plano único mensal) e devolve init_point do Checkout.
+     * Um único passo no cartão — cobrança recorrente R$ valorMensal.
      */
-    public Map<String, String> criarPreferenciaCriacao(
+    public Map<String, String> criarAssinaturaMensal(
             Long siteId,
             String slug,
-            String emailPagador,
-            String nomeNoiva,
-            String nomeNoivo) {
+            String emailPagador) {
 
         if (!configurado()) {
             throw new IllegalStateException(
                     "Mercado Pago não configurado. Defina MERCADOPAGO_ACCESS_TOKEN no servidor.");
         }
 
-        Map<String, Object> item = new HashMap<>();
-        item.put("title", "Site de Casamento — criação + 1º mês");
-        item.put("description", nomeNoiva + " & " + nomeNoivo + " (" + slug + ")");
-        item.put("quantity", 1);
-        item.put("currency_id", "BRL");
-        item.put("unit_price", valorCriacao.doubleValue());
-
-        Map<String, Object> body = new HashMap<>();
-        body.put("items", List.of(item));
-        body.put("payer", Map.of("email", emailPagador));
-        body.put("external_reference", "site:" + siteId);
-        body.put("statement_descriptor", "SITE CASAMENTO");
-
-        if (!backUrlSuccess.isBlank()) {
-            Map<String, String> backUrls = new HashMap<>();
-            backUrls.put("success", backUrlSuccess);
-            backUrls.put("failure", backUrlFailure.isBlank() ? backUrlSuccess : backUrlFailure);
-            backUrls.put("pending", backUrlSuccess);
-            body.put("back_urls", backUrls);
-            body.put("auto_return", "approved");
-        }
-        if (!notificationUrl.isBlank()) {
-            body.put("notification_url", notificationUrl);
-        }
-
-        String resposta = restClient.post()
-                .uri("/checkout/preferences")
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Bearer " + accessToken)
-                .body(body)
-                .retrieve()
-                .body(String.class);
-
-        return lerPreferenciaOuPreapproval(resposta, "preferência");
-    }
-
-    /**
-     * Assinatura pending — mensalidade R$ 49,90 com free_trial no plano (1º mês já pago nos R$ 99).
-     */
-    public Map<String, String> criarPreapprovalMensal(
-            Long siteId,
-            String slug,
-            String emailPagador,
-            String nomeNoiva,
-            String nomeNoivo,
-            Instant inicioAssinatura) {
-
-        if (!configurado()) {
-            throw new IllegalStateException("Mercado Pago não configurado.");
-        }
-
-        String planId = garantirPlanoMensal();
         String back = !backUrlSuccess.isBlank()
                 ? backUrlSuccess
                 : "https://eukevytosdev.github.io/site-casamento-landing/sucesso.html";
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("preapproval_plan_id", planId);
-        body.put("reason", "Site de Casamento mensalidade (" + slug + ")");
-        body.put("external_reference", "site:" + siteId);
-        body.put("payer_email", emailPagador);
-        body.put("back_url", back);
-        body.put("status", "pending");
-
         try {
-            String resposta = postMp("/preapproval", body);
-            Map<String, String> out = lerPreferenciaOuPreapproval(resposta, "assinatura");
+            String planId = garantirPlanoMensal(back);
+            Map<String, Object> body = new HashMap<>();
+            body.put("preapproval_plan_id", planId);
+            body.put("reason", "Site de Casamento (" + slug + ")");
+            body.put("external_reference", "site:" + siteId);
+            body.put("payer_email", emailPagador);
+            body.put("back_url", back);
+            body.put("status", "pending");
+            return lerCheckout(postMp("/preapproval", body));
+        } catch (IllegalStateException primeiro) {
+            // Fallback: assinatura sem plano associado
+            Map<String, Object> autoRecurring = new HashMap<>();
+            autoRecurring.put("frequency", 1);
+            autoRecurring.put("frequency_type", "months");
+            autoRecurring.put("transaction_amount", valorMensal.doubleValue());
+            autoRecurring.put("currency_id", "BRL");
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("reason", "Site de Casamento (" + slug + ")");
+            body.put("external_reference", "site:" + siteId);
+            body.put("payer_email", emailPagador);
+            body.put("auto_recurring", autoRecurring);
+            body.put("back_url", back);
+            body.put("status", "pending");
+
             try {
-                JsonNode json = objectMapper.readTree(resposta);
-                out.put("status", json.path("status").asText("pending"));
-            } catch (Exception ignored) {
-                out.putIfAbsent("status", "pending");
+                return lerCheckout(postMp("/preapproval", body));
+            } catch (IllegalStateException segundo) {
+                throw new IllegalStateException(
+                        primeiro.getMessage() + " | fallback: " + segundo.getMessage(), segundo);
             }
-            return out;
-        } catch (IllegalStateException e) {
-            // Fallback: assinatura sem plano (caso o plano falhe em algumas contas)
-            return criarPreapprovalSemPlano(siteId, slug, emailPagador, back);
         }
     }
 
-    private String garantirPlanoMensal() {
+    private String garantirPlanoMensal(String backUrl) {
         if (preapprovalPlanIdCache != null && !preapprovalPlanIdCache.isBlank()) {
             return preapprovalPlanIdCache;
         }
-        if (preapprovalPlanIdConfigurado != null && !preapprovalPlanIdConfigurado.isBlank()) {
+        if (!preapprovalPlanIdConfigurado.isBlank()) {
             preapprovalPlanIdCache = preapprovalPlanIdConfigurado;
             return preapprovalPlanIdCache;
         }
 
-        Map<String, Object> freeTrial = Map.of(
-                "frequency", 1,
-                "frequency_type", "months"
-        );
         Map<String, Object> autoRecurring = new HashMap<>();
         autoRecurring.put("frequency", 1);
         autoRecurring.put("frequency_type", "months");
         autoRecurring.put("transaction_amount", valorMensal.doubleValue());
         autoRecurring.put("currency_id", "BRL");
-        autoRecurring.put("free_trial", freeTrial);
-
-        String back = !backUrlSuccess.isBlank()
-                ? backUrlSuccess
-                : "https://eukevytosdev.github.io/site-casamento-landing/sucesso.html";
 
         Map<String, Object> body = new HashMap<>();
-        body.put("reason", "Site de Casamento — mensalidade");
+        body.put("reason", "Site de Casamento — plano mensal");
         body.put("auto_recurring", autoRecurring);
-        body.put("back_url", back);
+        body.put("back_url", backUrl);
 
         String resposta = postMp("/preapproval_plan", body);
         try {
-            JsonNode json = objectMapper.readTree(resposta);
-            String id = json.path("id").asText(null);
+            String id = objectMapper.readTree(resposta).path("id").asText(null);
             if (id == null || id.isBlank()) {
-                throw new IllegalStateException("Plano de assinatura sem id: " + resposta);
+                throw new IllegalStateException("Plano sem id: " + resposta);
             }
             preapprovalPlanIdCache = id;
             return id;
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            throw new IllegalStateException("Não foi possível criar o plano de mensalidade no Mercado Pago.", e);
+            throw new IllegalStateException("Não foi possível criar o plano no Mercado Pago.", e);
         }
     }
 
-    private Map<String, String> criarPreapprovalSemPlano(
-            Long siteId, String slug, String emailPagador, String back) {
+    public JsonNode buscarPagamento(String paymentId) {
+        return getJson("/v1/payments/{id}", paymentId);
+    }
 
-        Map<String, Object> autoRecurring = new HashMap<>();
-        autoRecurring.put("frequency", 1);
-        autoRecurring.put("frequency_type", "months");
-        autoRecurring.put("transaction_amount", valorMensal.doubleValue());
-        autoRecurring.put("currency_id", "BRL");
+    public JsonNode buscarPreapproval(String preapprovalId) {
+        return getJson("/preapproval/{id}", preapprovalId);
+    }
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("reason", "Site de Casamento mensalidade (" + slug + ")");
-        body.put("external_reference", "site:" + siteId);
-        body.put("payer_email", emailPagador);
-        body.put("auto_recurring", autoRecurring);
-        body.put("back_url", back);
-        body.put("status", "pending");
-
-        String resposta = postMp("/preapproval", body);
-        Map<String, String> out = lerPreferenciaOuPreapproval(resposta, "assinatura");
-        out.put("status", "pending");
-        return out;
+    public JsonNode buscarAuthorizedPayment(String authorizedPaymentId) {
+        return getJson("/authorized_payments/{id}", authorizedPaymentId);
     }
 
     private String postMp(String path, Object body) {
@@ -247,18 +184,6 @@ public class MercadoPagoService {
         }
     }
 
-    public JsonNode buscarPagamento(String paymentId) {
-        return getJson("/v1/payments/{id}", paymentId);
-    }
-
-    public JsonNode buscarPreapproval(String preapprovalId) {
-        return getJson("/preapproval/{id}", preapprovalId);
-    }
-
-    public JsonNode buscarAuthorizedPayment(String authorizedPaymentId) {
-        return getJson("/authorized_payments/{id}", authorizedPaymentId);
-    }
-
     private JsonNode getJson(String uri, String id) {
         if (!configurado()) {
             throw new IllegalStateException("Mercado Pago não configurado.");
@@ -275,7 +200,7 @@ public class MercadoPagoService {
         }
     }
 
-    private Map<String, String> lerPreferenciaOuPreapproval(String resposta, String rotulo) {
+    private Map<String, String> lerCheckout(String resposta) {
         try {
             JsonNode json = objectMapper.readTree(resposta);
             Map<String, String> out = new HashMap<>();
@@ -285,14 +210,18 @@ public class MercadoPagoService {
                 init = json.path("sandbox_init_point").asText();
             }
             out.put("init_point", init);
+            out.put("status", json.path("status").asText("pending"));
             if (out.get("id") == null || out.get("id").isBlank()) {
-                throw new IllegalStateException("Resposta do Mercado Pago sem id (" + rotulo + ").");
+                throw new IllegalStateException("Resposta do Mercado Pago sem id da assinatura.");
+            }
+            if (out.get("init_point") == null || out.get("init_point").isBlank()) {
+                throw new IllegalStateException("Resposta do Mercado Pago sem link de checkout.");
             }
             return out;
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            throw new IllegalStateException("Resposta inválida do Mercado Pago ao criar " + rotulo + ".", e);
+            throw new IllegalStateException("Resposta inválida do Mercado Pago ao criar assinatura.", e);
         }
     }
 }
