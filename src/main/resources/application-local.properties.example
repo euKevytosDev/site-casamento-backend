@@ -30,6 +30,6 @@ MERCADOPAGO_ACCESS_TOKEN=
 # Webhook (URL pública do Render):
 MERCADOPAGO_NOTIFICATION_URL=https://SEU-BACKEND.onrender.com/api/webhooks/mercadopago
 # Para onde voltar depois do pagamento:
-MERCADOPAGO_BACK_URL_SUCCESS=https://SEU-DOMINIO/landing/sucesso.html
-MERCADOPAGO_BACK_URL_FAILURE=https://SEU-DOMINIO/landing/index.html
+MERCADOPAGO_BACK_URL_SUCCESS=https://eukevytosdev.github.io/site-casamento-landing/sucesso.html
+MERCADOPAGO_BACK_URL_FAILURE=https://eukevytosdev.github.io/site-casamento-landing/
 MERCADOPAGO_VALOR_CRIACAO=99.00
