@@ -23,3 +23,13 @@ CLOUDINARY_FOLDER=presentes-casamento
 PIX_CHAVE=sua_chave_pix
 PIX_NOME_RECEBEDOR=Maria e Joao
 PIX_CIDADE=Sao Paulo
+
+# Mercado Pago — checkout da criação (R$ 99)
+# Token de PRODUÇÃO ou TESTE em https://www.mercadopago.com.br/developers
+MERCADOPAGO_ACCESS_TOKEN=
+# Webhook (URL pública do Render):
+MERCADOPAGO_NOTIFICATION_URL=https://SEU-BACKEND.onrender.com/api/webhooks/mercadopago
+# Para onde voltar depois do pagamento:
+MERCADOPAGO_BACK_URL_SUCCESS=https://SEU-DOMINIO/landing/sucesso.html
+MERCADOPAGO_BACK_URL_FAILURE=https://SEU-DOMINIO/landing/index.html
+MERCADOPAGO_VALOR_CRIACAO=99.00

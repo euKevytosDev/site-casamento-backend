@@ -97,6 +97,22 @@ public class Site {
     @Column(name = "pix_cidade")
     private String pixCidade;
 
+    /** PENDENTE | ATIVA | ATRASADA | CANCELADA */
+    @Column(name = "assinatura_status", length = 30)
+    private String assinaturaStatus = "ATIVA";
+
+    @Column(name = "mp_preference_id", length = 120)
+    private String mpPreferenceId;
+
+    @Column(name = "mp_payment_id", length = 120)
+    private String mpPaymentId;
+
+    @Column(name = "mp_preapproval_id", length = 120)
+    private String mpPreapprovalId;
+
+    @Column(name = "assinatura_inicio")
+    private java.time.Instant assinaturaInicio;
+
     public Site() {
     }
 
@@ -183,4 +199,19 @@ public class Site {
 
     public String getPixCidade() { return pixCidade; }
     public void setPixCidade(String pixCidade) { this.pixCidade = pixCidade; }
+
+    public String getAssinaturaStatus() { return assinaturaStatus; }
+    public void setAssinaturaStatus(String assinaturaStatus) { this.assinaturaStatus = assinaturaStatus; }
+
+    public String getMpPreferenceId() { return mpPreferenceId; }
+    public void setMpPreferenceId(String mpPreferenceId) { this.mpPreferenceId = mpPreferenceId; }
+
+    public String getMpPaymentId() { return mpPaymentId; }
+    public void setMpPaymentId(String mpPaymentId) { this.mpPaymentId = mpPaymentId; }
+
+    public String getMpPreapprovalId() { return mpPreapprovalId; }
+    public void setMpPreapprovalId(String mpPreapprovalId) { this.mpPreapprovalId = mpPreapprovalId; }
+
+    public java.time.Instant getAssinaturaInicio() { return assinaturaInicio; }
+    public void setAssinaturaInicio(java.time.Instant assinaturaInicio) { this.assinaturaInicio = assinaturaInicio; }
 }

@@ -37,19 +37,39 @@ public class JwtService {
     }
 
     public String gerarToken(String login) {
+        return gerarToken(login, null, "ADMIN");
+    }
+
+    public String gerarToken(String login, String siteId, String role) {
         Date agora = new Date();
         Date expiracao = new Date(agora.getTime() + expiracaoMs);
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(login)
+                .claim("role", role == null ? "ADMIN" : role)
                 .issuedAt(agora)
                 .expiration(expiracao)
-                .signWith(secretKey)
-                .compact();
+                .signWith(secretKey);
+
+        if (siteId != null && !siteId.isBlank()) {
+            builder.claim("siteId", siteId);
+        }
+
+        return builder.compact();
     }
 
     public String extrairLogin(String token) {
         return extrairClaims(token).getSubject();
+    }
+
+    public String extrairSiteId(String token) {
+        Object v = extrairClaims(token).get("siteId");
+        return v == null ? null : String.valueOf(v);
+    }
+
+    public String extrairRole(String token) {
+        Object v = extrairClaims(token).get("role");
+        return v == null ? "ADMIN" : String.valueOf(v);
     }
 
     public boolean tokenValido(String token) {

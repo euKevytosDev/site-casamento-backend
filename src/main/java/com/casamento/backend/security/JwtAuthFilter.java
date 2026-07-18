@@ -34,11 +34,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             if (jwtService.tokenValido(token)) {
                 String login = jwtService.extrairLogin(token);
+                String role = jwtService.extrairRole(token);
+                String authority = "NOIVA".equalsIgnoreCase(role) ? "ROLE_NOIVA" : "ROLE_ADMIN";
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 login,
                                 null,
-                                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+                                List.of(new SimpleGrantedAuthority(authority))
                         );
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
