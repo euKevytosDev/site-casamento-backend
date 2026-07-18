@@ -9,9 +9,6 @@ import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,9 +20,6 @@ import java.util.Map;
  */
 @Service
 public class MercadoPagoService {
-
-    private static final DateTimeFormatter MP_DATE =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -121,8 +115,7 @@ public class MercadoPagoService {
 
     /**
      * Assinatura sem plano (pending) — mensalidade R$ 49,90.
-     * Cobrança começa 1 mês após a criação (1º mês já pago nos R$ 99).
-     * Retorna id + init_point para o casal autorizar o cartão no MP.
+     * free_trial de 1 mês = 1ª cobrança só no 2º mês (1º já pago nos R$ 99).
      */
     public Map<String, String> criarPreapprovalMensal(
             Long siteId,
@@ -136,49 +129,52 @@ public class MercadoPagoService {
             throw new IllegalStateException("Mercado Pago não configurado.");
         }
 
-        Instant base = inicioAssinatura != null ? inicioAssinatura : Instant.now();
-        Instant inicioCobranca = base.plus(30, ChronoUnit.DAYS);
-        Instant fim = base.plus(3650, ChronoUnit.DAYS); // ~10 anos (start_date exige end_date)
+        Map<String, Object> freeTrial = new HashMap<>();
+        freeTrial.put("frequency", 1);
+        freeTrial.put("frequency_type", "months");
 
         Map<String, Object> autoRecurring = new HashMap<>();
         autoRecurring.put("frequency", 1);
         autoRecurring.put("frequency_type", "months");
         autoRecurring.put("transaction_amount", valorMensal.doubleValue());
         autoRecurring.put("currency_id", "BRL");
-        autoRecurring.put("start_date", formatarDataMp(inicioCobranca));
-        autoRecurring.put("end_date", formatarDataMp(fim));
+        autoRecurring.put("free_trial", freeTrial);
 
         Map<String, Object> body = new HashMap<>();
-        body.put("reason", "Site de Casamento — mensalidade (" + slug + ")");
+        body.put("reason", "Site de Casamento mensalidade (" + slug + ")");
         body.put("external_reference", "site:" + siteId);
         body.put("payer_email", emailPagador);
         body.put("auto_recurring", autoRecurring);
         body.put("status", "pending");
-        if (!backUrlSuccess.isBlank()) {
-            body.put("back_url", backUrlSuccess);
-        } else {
-            body.put("back_url", "https://eukevytosdev.github.io/site-casamento-landing/sucesso.html");
-        }
-        if (!notificationUrl.isBlank()) {
-            body.put("notification_url", notificationUrl);
-        }
+        String back = !backUrlSuccess.isBlank()
+                ? backUrlSuccess
+                : "https://eukevytosdev.github.io/site-casamento-landing/sucesso.html";
+        body.put("back_url", back);
 
-        String resposta = restClient.post()
-                .uri("/preapproval")
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Bearer " + accessToken)
-                .body(body)
-                .retrieve()
-                .body(String.class);
-
-        Map<String, String> out = lerPreferenciaOuPreapproval(resposta, "assinatura");
         try {
-            JsonNode json = objectMapper.readTree(resposta);
-            out.put("status", json.path("status").asText("pending"));
-        } catch (Exception ignored) {
-            out.putIfAbsent("status", "pending");
+            String resposta = restClient.post()
+                    .uri("/preapproval")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+
+            Map<String, String> out = lerPreferenciaOuPreapproval(resposta, "assinatura");
+            try {
+                JsonNode json = objectMapper.readTree(resposta);
+                out.put("status", json.path("status").asText("pending"));
+            } catch (Exception ignored) {
+                out.putIfAbsent("status", "pending");
+            }
+            return out;
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            String detalhe = e.getResponseBodyAsString();
+            if (detalhe == null || detalhe.isBlank()) {
+                detalhe = e.getMessage();
+            }
+            throw new IllegalStateException("Mercado Pago recusou a assinatura: " + detalhe, e);
         }
-        return out;
     }
 
     public JsonNode buscarPagamento(String paymentId) {
@@ -228,9 +224,5 @@ public class MercadoPagoService {
         } catch (Exception e) {
             throw new IllegalStateException("Resposta inválida do Mercado Pago ao criar " + rotulo + ".", e);
         }
-    }
-
-    private static String formatarDataMp(Instant instant) {
-        return MP_DATE.format(instant.atOffset(ZoneOffset.of("-03:00")));
     }
 }

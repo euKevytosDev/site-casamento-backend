@@ -76,8 +76,9 @@ public class AssinaturaController {
         } catch (IllegalStateException e) {
             return ResponseEntity.status(503).body(e.getMessage());
         } catch (Exception e) {
+            String detalhe = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             return ResponseEntity.internalServerError()
-                    .body("Não foi possível gerar o link da mensalidade. Tente de novo.");
+                    .body("Não foi possível gerar o link da mensalidade: " + detalhe);
         }
     }
 
