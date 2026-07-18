@@ -106,6 +106,9 @@ public class AdminSitePersonalizacaoController {
         if (body.containsKey("pixCidade")) {
             site.setPixCidade(blankToNull(asString(body.get("pixCidade"))));
         }
+        if (body.containsKey("musicaUrl")) {
+            site.setMusicaUrl(blankToNull(asString(body.get("musicaUrl"))));
+        }
 
         @SuppressWarnings("unchecked")
         Map<String, Object> cores = body.get("cores") instanceof Map

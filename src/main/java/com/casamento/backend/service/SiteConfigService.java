@@ -42,6 +42,7 @@ public class SiteConfigService {
         r.setPixChave(site.getPixChave());
         r.setPixNomeRecebedor(site.getPixNomeRecebedor());
         r.setPixCidade(site.getPixCidade());
+        r.setMusicaUrl(site.getMusicaUrl());
         return r;
     }
 

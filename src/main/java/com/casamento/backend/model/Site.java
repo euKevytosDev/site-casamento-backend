@@ -97,6 +97,10 @@ public class Site {
     @Column(name = "pix_cidade")
     private String pixCidade;
 
+    /** Caminho/URL da música de fundo (ex.: musicas/Blessings.mp3) */
+    @Column(name = "musica_url", length = 500)
+    private String musicaUrl;
+
     /** PENDENTE | ATIVA | ATRASADA | CANCELADA */
     @Column(name = "assinatura_status", length = 30)
     private String assinaturaStatus = "ATIVA";
@@ -207,6 +211,9 @@ public class Site {
 
     public String getPixCidade() { return pixCidade; }
     public void setPixCidade(String pixCidade) { this.pixCidade = pixCidade; }
+
+    public String getMusicaUrl() { return musicaUrl; }
+    public void setMusicaUrl(String musicaUrl) { this.musicaUrl = musicaUrl; }
 
     public String getAssinaturaStatus() { return assinaturaStatus; }
     public void setAssinaturaStatus(String assinaturaStatus) { this.assinaturaStatus = assinaturaStatus; }

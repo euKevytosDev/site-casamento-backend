@@ -28,6 +28,7 @@ public class SiteConfigResponse {
     private String pixChave;
     private String pixNomeRecebedor;
     private String pixCidade;
+    private String musicaUrl;
 
     public String getSiteId() { return siteId; }
     public void setSiteId(String siteId) { this.siteId = siteId; }
@@ -88,4 +89,7 @@ public class SiteConfigResponse {
 
     public String getPixCidade() { return pixCidade; }
     public void setPixCidade(String pixCidade) { this.pixCidade = pixCidade; }
+
+    public String getMusicaUrl() { return musicaUrl; }
+    public void setMusicaUrl(String musicaUrl) { this.musicaUrl = musicaUrl; }
 }
