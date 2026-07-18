@@ -22,11 +22,13 @@ public class AssinaturaController {
 
     @GetMapping("/plano")
     public Map<String, Object> plano() {
+        int permanencia = mercadoPagoService.getPermanenciaMinimaMeses();
         return Map.of(
                 "nome", "Site de Casamento",
                 "valorMensal", mercadoPagoService.getValorMensal(),
-                "descricaoMensal", "Plano único — assinatura mensal",
-                "permanenciaMinimaMeses", mercadoPagoService.getPermanenciaMinimaMeses(),
+                "descricaoMensal", "Plano único — assinatura mensal, cancele quando quiser",
+                "permanenciaMinimaMeses", permanencia,
+                "cancelamentoLivre", permanencia <= 0,
                 "arrependimentoDias", 7,
                 "mpConfigurado", mercadoPagoService.configurado(),
                 "modoTeste", mercadoPagoService.modoTeste()

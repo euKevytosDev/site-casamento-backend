@@ -139,9 +139,10 @@ public class AssinaturaService {
         out.put("checkoutUrl", assinatura.get("init_point"));
         out.put("valorMensal", mercadoPagoService.getValorMensal());
         out.put("permanenciaMinimaMeses", mercadoPagoService.getPermanenciaMinimaMeses());
+        out.put("cancelamentoLivre", mercadoPagoService.getPermanenciaMinimaMeses() <= 0);
         out.put("mensagem", "Autorize a assinatura de R$ "
                 + mercadoPagoService.getValorMensal()
-                + "/mês no Mercado Pago para liberar seu site.");
+                + "/mês no Mercado Pago. Sem fidelidade — cancele quando quiser.");
         out.put("modoTeste", mercadoPagoService.modoTeste());
         out.put("retomado", true);
         return out;
