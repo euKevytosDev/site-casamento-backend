@@ -1,0 +1,14 @@
+---
+description: Visão SaaS — noiva cadastra o site sozinha (ainda em construção)
+alwaysApply: true
+---
+
+# SaaS self-service (visão do produto)
+
+Direção combinada com o usuário — **não implementar o painel completo de uma vez**, mas manter cada peça pronta para plugar depois:
+
+- Evoluir o site para algo **automatizado**, onde a **noiva/casal cadastra** o conteúdo sem edição manual de código.
+- Configurável por eles (meta): nomes, upload de imagens (hero, carrossel/galeria, local), data/hora, local, textos, PIX, presentes, etc.
+- Front: `/Users/raiankevin/Documents/site-casamento-mobile-novo`
+- Backend já tem multi-tenant (`Site` + `X-Site-Id`); self-service deve estender admin/API por casamento.
+- Não bloquear features pontuais esperando o painel completo.

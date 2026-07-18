@@ -1,137 +1,186 @@
 package com.casamento.backend.model;
+
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
 /**
  * Entidade Site = 1 casamento / 1 cliente no banco.
- * No multi-tenant, cada "inquilino" do sistema é um Site
- * (ex.: rafaekevin, mariaejoao). Presentes, presença e PIX
- * depois vão apontar para um Site via site_id.
+ * Campos de conteúdo/visual permitem a noiva personalizar o site pelo admin.
  */
-@Entity // Diz ao Hibernate/JPA: "esta classe vira uma tabela no banco"
-@Table(name = "site") // Nome EXATO da tabela no PostgreSQL
+@Entity
+@Table(name = "site")
 public class Site {
 
-    // Chave primária: número único de cada linha (1, 2, 3...)
     @Id
-    // O banco gera o id sozinho (SERIAL / IDENTITY) — não precisamos enviar
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Identificador público amigável do site.
-     * Ex.: "rafaekevin" — o front manda isso no header X-Site-Id.
-     * unique = true → dois casamentos não podem ter o mesmo slug.
-     */
     @Column(nullable = false, unique = true, length = 80)
     private String slug;
 
-    // Coluna no banco: nome_noiva (Java usa camelCase; Postgres usa snake_case)
     @Column(name = "nome_noiva", nullable = false)
     private String nomeNoiva;
 
     @Column(name = "nome_noivo", nullable = false)
     private String nomeNoivo;
 
-    // Só a data do casamento (sem hora). Ex.: 2027-04-24
+    @Column(name = "nome_curto", length = 80)
+    private String nomeCurto;
+
     @Column(name = "data_casamento")
     private LocalDate dataCasamento;
 
-    // Se false, o site fica "desligado" (não atende API desse cliente)
+    @Column(name = "hora_casamento", length = 10)
+    private String horaCasamento;
+
+    @Column(name = "dia_semana", length = 30)
+    private String diaSemana;
+
+    @Column(name = "mes_extenso", length = 30)
+    private String mesExtenso;
+
+    @Column(name = "pais_noiva")
+    private String paisNoiva;
+
+    @Column(name = "pais_noivo")
+    private String paisNoivo;
+
+    @Column(name = "local_nome")
+    private String localNome;
+
+    @Column(name = "maps_url", length = 500)
+    private String mapsUrl;
+
+    @Column(name = "foto_hero_url", length = 500)
+    private String fotoHeroUrl;
+
+    @Column(name = "foto_secundaria_url", length = 500)
+    private String fotoSecundariaUrl;
+
+    @Column(name = "foto_local_url", length = 500)
+    private String fotoLocalUrl;
+
+    /** JSON array de URLs: ["https://...","https://..."] */
+    @Column(name = "fotos_carrossel", columnDefinition = "TEXT")
+    private String fotosCarrossel;
+
+    @Column(name = "cor_verde", length = 20)
+    private String corVerde;
+
+    @Column(name = "cor_verde_escuro", length = 20)
+    private String corVerdeEscuro;
+
+    @Column(name = "cor_verde_claro", length = 20)
+    private String corVerdeClaro;
+
+    @Column(name = "cor_fundo", length = 20)
+    private String corFundo;
+
+    @Column(name = "cor_fundo_bege", length = 20)
+    private String corFundoBege;
+
+    @Column(name = "cor_texto", length = 20)
+    private String corTexto;
+
+    @Column(name = "cor_texto_hero", length = 20)
+    private String corTextoHero;
+
     @Column(nullable = false)
     private boolean ativo = true;
 
-    // Chave PIX deste casal (CPF, e-mail, telefone ou chave aleatória)
     @Column(name = "pix_chave")
     private String pixChave;
 
-    // Nome que aparece no PIX (quem recebe)
     @Column(name = "pix_nome_recebedor")
     private String pixNomeRecebedor;
 
-    // Cidade do recebedor (padrão do QR Code PIX)
     @Column(name = "pix_cidade")
     private String pixCidade;
 
-
-
-
-    // Construtor vazio: o Spring/JPA precisa dele para criar o objeto
     public Site() {
     }
 
-    // --- Getters e setters: o Java lê (get) e grava (set) cada campo ---
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
+    public String getSlug() { return slug; }
+    public void setSlug(String slug) { this.slug = slug; }
 
-    public String getPixChave() {
-        return pixChave;
-    }
+    public String getNomeNoiva() { return nomeNoiva; }
+    public void setNomeNoiva(String nomeNoiva) { this.nomeNoiva = nomeNoiva; }
 
-    public void setPixChave(String pixChave) {
-        this.pixChave = pixChave;
-    }
+    public String getNomeNoivo() { return nomeNoivo; }
+    public void setNomeNoivo(String nomeNoivo) { this.nomeNoivo = nomeNoivo; }
 
-    public String getPixNomeRecebedor() {
-        return pixNomeRecebedor;
-    }
+    public String getNomeCurto() { return nomeCurto; }
+    public void setNomeCurto(String nomeCurto) { this.nomeCurto = nomeCurto; }
 
-    public void setPixNomeRecebedor(String pixNomeRecebedor) {
-        this.pixNomeRecebedor = pixNomeRecebedor;
-    }
+    public LocalDate getDataCasamento() { return dataCasamento; }
+    public void setDataCasamento(LocalDate dataCasamento) { this.dataCasamento = dataCasamento; }
 
-    public String getPixCidade() {
-        return pixCidade;
-    }
+    public String getHoraCasamento() { return horaCasamento; }
+    public void setHoraCasamento(String horaCasamento) { this.horaCasamento = horaCasamento; }
 
-    public void setPixCidade(String pixCidade) {
-        this.pixCidade = pixCidade;
-    }
+    public String getDiaSemana() { return diaSemana; }
+    public void setDiaSemana(String diaSemana) { this.diaSemana = diaSemana; }
 
-    public Long getId() {
-        return id;
-    }
+    public String getMesExtenso() { return mesExtenso; }
+    public void setMesExtenso(String mesExtenso) { this.mesExtenso = mesExtenso; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public String getPaisNoiva() { return paisNoiva; }
+    public void setPaisNoiva(String paisNoiva) { this.paisNoiva = paisNoiva; }
 
-    public String getSlug() {
-        return slug;
-    }
+    public String getPaisNoivo() { return paisNoivo; }
+    public void setPaisNoivo(String paisNoivo) { this.paisNoivo = paisNoivo; }
 
-    public void setSlug(String slug) {
-        this.slug = slug;
-    }
+    public String getLocalNome() { return localNome; }
+    public void setLocalNome(String localNome) { this.localNome = localNome; }
 
-    public String getNomeNoiva() {
-        return nomeNoiva;
-    }
+    public String getMapsUrl() { return mapsUrl; }
+    public void setMapsUrl(String mapsUrl) { this.mapsUrl = mapsUrl; }
 
-    public void setNomeNoiva(String nomeNoiva) {
-        this.nomeNoiva = nomeNoiva;
-    }
+    public String getFotoHeroUrl() { return fotoHeroUrl; }
+    public void setFotoHeroUrl(String fotoHeroUrl) { this.fotoHeroUrl = fotoHeroUrl; }
 
-    public String getNomeNoivo() {
-        return nomeNoivo;
-    }
+    public String getFotoSecundariaUrl() { return fotoSecundariaUrl; }
+    public void setFotoSecundariaUrl(String fotoSecundariaUrl) { this.fotoSecundariaUrl = fotoSecundariaUrl; }
 
-    public void setNomeNoivo(String nomeNoivo) {
-        this.nomeNoivo = nomeNoivo;
-    }
+    public String getFotoLocalUrl() { return fotoLocalUrl; }
+    public void setFotoLocalUrl(String fotoLocalUrl) { this.fotoLocalUrl = fotoLocalUrl; }
 
-    public LocalDate getDataCasamento() {
-        return dataCasamento;
-    }
+    public String getFotosCarrossel() { return fotosCarrossel; }
+    public void setFotosCarrossel(String fotosCarrossel) { this.fotosCarrossel = fotosCarrossel; }
 
-    public void setDataCasamento(LocalDate dataCasamento) {
-        this.dataCasamento = dataCasamento;
-    }
+    public String getCorVerde() { return corVerde; }
+    public void setCorVerde(String corVerde) { this.corVerde = corVerde; }
 
-    public boolean isAtivo() {
-        return ativo;
-    }
+    public String getCorVerdeEscuro() { return corVerdeEscuro; }
+    public void setCorVerdeEscuro(String corVerdeEscuro) { this.corVerdeEscuro = corVerdeEscuro; }
 
-    public void setAtivo(boolean ativo) {
-        this.ativo = ativo;
-    }
+    public String getCorVerdeClaro() { return corVerdeClaro; }
+    public void setCorVerdeClaro(String corVerdeClaro) { this.corVerdeClaro = corVerdeClaro; }
+
+    public String getCorFundo() { return corFundo; }
+    public void setCorFundo(String corFundo) { this.corFundo = corFundo; }
+
+    public String getCorFundoBege() { return corFundoBege; }
+    public void setCorFundoBege(String corFundoBege) { this.corFundoBege = corFundoBege; }
+
+    public String getCorTexto() { return corTexto; }
+    public void setCorTexto(String corTexto) { this.corTexto = corTexto; }
+
+    public String getCorTextoHero() { return corTextoHero; }
+    public void setCorTextoHero(String corTextoHero) { this.corTextoHero = corTextoHero; }
+
+    public boolean isAtivo() { return ativo; }
+    public void setAtivo(boolean ativo) { this.ativo = ativo; }
+
+    public String getPixChave() { return pixChave; }
+    public void setPixChave(String pixChave) { this.pixChave = pixChave; }
+
+    public String getPixNomeRecebedor() { return pixNomeRecebedor; }
+    public void setPixNomeRecebedor(String pixNomeRecebedor) { this.pixNomeRecebedor = pixNomeRecebedor; }
+
+    public String getPixCidade() { return pixCidade; }
+    public void setPixCidade(String pixCidade) { this.pixCidade = pixCidade; }
 }

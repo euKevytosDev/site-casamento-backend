@@ -38,6 +38,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/health").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/site/config").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/presentes", "/api/presentes/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/presentes/gerar-pix").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/presentes/finalizar-carrinho").permitAll()

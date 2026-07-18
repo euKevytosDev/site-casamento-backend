@@ -34,14 +34,20 @@ public class FileStorageService {
     }
 
     public String salvarImagem(MultipartFile arquivo) throws IOException {
+        return salvarImagem(arquivo, pastaCloudinary);
+    }
+
+    public String salvarImagem(MultipartFile arquivo, String pasta) throws IOException {
         validarArquivo(arquivo);
+
+        String pastaFinal = (pasta == null || pasta.isBlank()) ? pastaCloudinary : pasta.trim();
 
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> resultado = cloudinary.uploader().upload(
                     arquivo.getBytes(),
                     ObjectUtils.asMap(
-                            "folder", pastaCloudinary,
+                            "folder", pastaFinal,
                             "public_id", UUID.randomUUID().toString(),
                             "resource_type", "image"
                     )
@@ -111,7 +117,7 @@ public class FileStorageService {
 
     private void validarArquivo(MultipartFile arquivo) {
         if (arquivo == null || arquivo.isEmpty()) {
-            throw new IllegalArgumentException("Envie uma imagem do presente.");
+            throw new IllegalArgumentException("Envie uma imagem.");
         }
 
         String contentType = arquivo.getContentType();
