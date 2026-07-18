@@ -29,6 +29,8 @@ public class MercadoPagoService {
     private final String backUrlFailure;
     private final BigDecimal valorCriacao;
     private final BigDecimal valorMensal;
+    private final String preapprovalPlanIdConfigurado;
+    private volatile String preapprovalPlanIdCache;
 
     public MercadoPagoService(
             ObjectMapper objectMapper,
@@ -37,7 +39,8 @@ public class MercadoPagoService {
             @Value("${mercadopago.back-url-success:}") String backUrlSuccess,
             @Value("${mercadopago.back-url-failure:}") String backUrlFailure,
             @Value("${mercadopago.valor-criacao:99.00}") BigDecimal valorCriacao,
-            @Value("${mercadopago.valor-mensal:49.90}") BigDecimal valorMensal) {
+            @Value("${mercadopago.valor-mensal:49.90}") BigDecimal valorMensal,
+            @Value("${mercadopago.preapproval-plan-id:}") String preapprovalPlanId) {
         this.objectMapper = objectMapper;
         this.accessToken = accessToken == null ? "" : accessToken.trim();
         this.notificationUrl = notificationUrl == null ? "" : notificationUrl.trim();
@@ -45,6 +48,7 @@ public class MercadoPagoService {
         this.backUrlFailure = backUrlFailure == null ? "" : backUrlFailure.trim();
         this.valorCriacao = valorCriacao;
         this.valorMensal = valorMensal;
+        this.preapprovalPlanIdConfigurado = preapprovalPlanId == null ? "" : preapprovalPlanId.trim();
         this.restClient = RestClient.builder()
                 .baseUrl("https://api.mercadopago.com")
                 .build();
@@ -114,8 +118,7 @@ public class MercadoPagoService {
     }
 
     /**
-     * Assinatura sem plano (pending) — mensalidade R$ 49,90.
-     * free_trial de 1 mês = 1ª cobrança só no 2º mês (1º já pago nos R$ 99).
+     * Assinatura pending — mensalidade R$ 49,90 com free_trial no plano (1º mês já pago nos R$ 99).
      */
     public Map<String, String> criarPreapprovalMensal(
             Long siteId,
@@ -129,37 +132,21 @@ public class MercadoPagoService {
             throw new IllegalStateException("Mercado Pago não configurado.");
         }
 
-        Map<String, Object> freeTrial = new HashMap<>();
-        freeTrial.put("frequency", 1);
-        freeTrial.put("frequency_type", "months");
-
-        Map<String, Object> autoRecurring = new HashMap<>();
-        autoRecurring.put("frequency", 1);
-        autoRecurring.put("frequency_type", "months");
-        autoRecurring.put("transaction_amount", valorMensal.doubleValue());
-        autoRecurring.put("currency_id", "BRL");
-        autoRecurring.put("free_trial", freeTrial);
-
-        Map<String, Object> body = new HashMap<>();
-        body.put("reason", "Site de Casamento mensalidade (" + slug + ")");
-        body.put("external_reference", "site:" + siteId);
-        body.put("payer_email", emailPagador);
-        body.put("auto_recurring", autoRecurring);
-        body.put("status", "pending");
+        String planId = garantirPlanoMensal();
         String back = !backUrlSuccess.isBlank()
                 ? backUrlSuccess
                 : "https://eukevytosdev.github.io/site-casamento-landing/sucesso.html";
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("preapproval_plan_id", planId);
+        body.put("reason", "Site de Casamento mensalidade (" + slug + ")");
+        body.put("external_reference", "site:" + siteId);
+        body.put("payer_email", emailPagador);
         body.put("back_url", back);
+        body.put("status", "pending");
 
         try {
-            String resposta = restClient.post()
-                    .uri("/preapproval")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .header("Authorization", "Bearer " + accessToken)
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
-
+            String resposta = postMp("/preapproval", body);
             Map<String, String> out = lerPreferenciaOuPreapproval(resposta, "assinatura");
             try {
                 JsonNode json = objectMapper.readTree(resposta);
@@ -168,12 +155,95 @@ public class MercadoPagoService {
                 out.putIfAbsent("status", "pending");
             }
             return out;
+        } catch (IllegalStateException e) {
+            // Fallback: assinatura sem plano (caso o plano falhe em algumas contas)
+            return criarPreapprovalSemPlano(siteId, slug, emailPagador, back);
+        }
+    }
+
+    private String garantirPlanoMensal() {
+        if (preapprovalPlanIdCache != null && !preapprovalPlanIdCache.isBlank()) {
+            return preapprovalPlanIdCache;
+        }
+        if (preapprovalPlanIdConfigurado != null && !preapprovalPlanIdConfigurado.isBlank()) {
+            preapprovalPlanIdCache = preapprovalPlanIdConfigurado;
+            return preapprovalPlanIdCache;
+        }
+
+        Map<String, Object> freeTrial = Map.of(
+                "frequency", 1,
+                "frequency_type", "months"
+        );
+        Map<String, Object> autoRecurring = new HashMap<>();
+        autoRecurring.put("frequency", 1);
+        autoRecurring.put("frequency_type", "months");
+        autoRecurring.put("transaction_amount", valorMensal.doubleValue());
+        autoRecurring.put("currency_id", "BRL");
+        autoRecurring.put("free_trial", freeTrial);
+
+        String back = !backUrlSuccess.isBlank()
+                ? backUrlSuccess
+                : "https://eukevytosdev.github.io/site-casamento-landing/sucesso.html";
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("reason", "Site de Casamento — mensalidade");
+        body.put("auto_recurring", autoRecurring);
+        body.put("back_url", back);
+
+        String resposta = postMp("/preapproval_plan", body);
+        try {
+            JsonNode json = objectMapper.readTree(resposta);
+            String id = json.path("id").asText(null);
+            if (id == null || id.isBlank()) {
+                throw new IllegalStateException("Plano de assinatura sem id: " + resposta);
+            }
+            preapprovalPlanIdCache = id;
+            return id;
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("Não foi possível criar o plano de mensalidade no Mercado Pago.", e);
+        }
+    }
+
+    private Map<String, String> criarPreapprovalSemPlano(
+            Long siteId, String slug, String emailPagador, String back) {
+
+        Map<String, Object> autoRecurring = new HashMap<>();
+        autoRecurring.put("frequency", 1);
+        autoRecurring.put("frequency_type", "months");
+        autoRecurring.put("transaction_amount", valorMensal.doubleValue());
+        autoRecurring.put("currency_id", "BRL");
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("reason", "Site de Casamento mensalidade (" + slug + ")");
+        body.put("external_reference", "site:" + siteId);
+        body.put("payer_email", emailPagador);
+        body.put("auto_recurring", autoRecurring);
+        body.put("back_url", back);
+        body.put("status", "pending");
+
+        String resposta = postMp("/preapproval", body);
+        Map<String, String> out = lerPreferenciaOuPreapproval(resposta, "assinatura");
+        out.put("status", "pending");
+        return out;
+    }
+
+    private String postMp(String path, Object body) {
+        try {
+            return restClient.post()
+                    .uri(path)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
         } catch (org.springframework.web.client.RestClientResponseException e) {
             String detalhe = e.getResponseBodyAsString();
             if (detalhe == null || detalhe.isBlank()) {
                 detalhe = e.getMessage();
             }
-            throw new IllegalStateException("Mercado Pago recusou a assinatura: " + detalhe, e);
+            throw new IllegalStateException("Mercado Pago recusou (" + path + "): " + detalhe, e);
         }
     }
 
