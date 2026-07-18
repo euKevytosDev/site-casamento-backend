@@ -106,33 +106,9 @@ public class PresenteController {
     }
 
     @PostMapping("/{id}/comprar")
-    public ResponseEntity<?> comprar(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> body) {
-
-        Site site = siteAtual();
-        if (site == null) {
-            return ResponseEntity.badRequest()
-                    .body("Informe o header X-Site-Id com o slug do casamento.");
-        }
-
-        return presenteRepository.findById(id)
-                .filter(p -> p.getSite() != null && site.getId().equals(p.getSite().getId()))
-                .map(presente -> {
-                    if (presente.getCotasDisponiveis() <= 0) {
-                        return ResponseEntity.status(409)
-                                .body("Não há mais cotas disponíveis para este item.");
-                    }
-                    String nomeComprador = body.get("nomeComprador");
-                    if (nomeComprador == null || nomeComprador.isBlank()) {
-                        return ResponseEntity.badRequest()
-                                .body("Informe o nome do comprador.");
-                    }
-                    presente.setCotasVendidas(presente.getCotasVendidas() + 1);
-                    presente.atualizarStatusComprado();
-                    presente.setNomeComprador(nomeComprador.trim());
-                    return ResponseEntity.ok(presenteRepository.save(presente));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> comprar() {
+        // Endpoint legado removido: reservava cotas sem prova de pagamento.
+        return ResponseEntity.status(410)
+                .body("Este endpoint foi desativado. Use PIX (gerar-pix) ou checkout-cartão.");
     }
 }

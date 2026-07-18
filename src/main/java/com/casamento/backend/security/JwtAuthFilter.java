@@ -36,6 +36,22 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String login = jwtService.extrairLogin(token);
                 String role = jwtService.extrairRole(token);
                 String authority = "NOIVA".equalsIgnoreCase(role) ? "ROLE_NOIVA" : "ROLE_ADMIN";
+
+                // Noiva só acessa o próprio site (X-Site-Id deve bater com o claim do JWT)
+                if ("ROLE_NOIVA".equals(authority) && isAdminApi(request.getRequestURI())) {
+                    String jwtSite = jwtService.extrairSiteId(token);
+                    String headerSite = request.getHeader("X-Site-Id");
+                    if (jwtSite == null || jwtSite.isBlank()
+                            || headerSite == null || headerSite.isBlank()
+                            || !jwtSite.equalsIgnoreCase(headerSite.trim())) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json;charset=UTF-8");
+                        response.getWriter().write(
+                                "{\"error\":\"Acesso negado: este login não corresponde ao site informado.\"}");
+                        return;
+                    }
+                }
+
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 login,
@@ -47,5 +63,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private static boolean isAdminApi(String uri) {
+        return uri != null && uri.startsWith("/api/admin/");
     }
 }

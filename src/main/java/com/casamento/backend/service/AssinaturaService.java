@@ -42,16 +42,21 @@ public class AssinaturaService {
             String nomeNoivo,
             String slug,
             String email,
-            String senha) {
+            String senha,
+            String emailPagador) {
 
         String slugNorm = normalizarSlug(slug);
         String emailNorm = email.trim().toLowerCase();
+        String emailMp = normalizarEmailPagador(emailPagador, emailNorm);
 
         if (slugNorm.isBlank()) {
             throw new IllegalArgumentException("Informe um slug (ex: mariajoao).");
         }
         if (senha == null || senha.length() < 6) {
             throw new IllegalArgumentException("A senha precisa ter pelo menos 6 caracteres.");
+        }
+        if (emailMp.isBlank() || !emailMp.contains("@")) {
+            throw new IllegalArgumentException("Informe um e-mail válido para o pagamento no Mercado Pago.");
         }
 
         var usuarioExistente = usuarioNoivaRepository.findByEmailIgnoreCase(emailNorm);
@@ -62,7 +67,7 @@ public class AssinaturaService {
                         "Já existe uma conta ativa com este e-mail. Entre no painel para continuar.");
             }
             return retomarCheckoutPendente(
-                    usuarioExistente.get(), siteExistente, nomeNoiva, nomeNoivo, slugNorm, senha);
+                    usuarioExistente.get(), siteExistente, nomeNoiva, nomeNoivo, slugNorm, senha, emailMp);
         }
 
         if (siteRepository.findBySlug(slugNorm).isPresent()) {
@@ -89,7 +94,7 @@ public class AssinaturaService {
         usuario.setSite(site);
         usuarioNoivaRepository.save(usuario);
 
-        return gerarCheckoutAssinatura(site, emailNorm);
+        return gerarCheckoutAssinatura(site, emailMp);
     }
 
     private Map<String, Object> retomarCheckoutPendente(
@@ -98,7 +103,8 @@ public class AssinaturaService {
             String nomeNoiva,
             String nomeNoivo,
             String slugNorm,
-            String senha) {
+            String senha,
+            String emailMp) {
 
         // Permite trocar o slug só se estiver livre (ou for o mesmo do site)
         if (!slugNorm.equalsIgnoreCase(site.getSlug())) {
@@ -119,12 +125,20 @@ public class AssinaturaService {
         usuarioNoivaRepository.save(usuario);
         siteRepository.save(site);
 
-        return gerarCheckoutAssinatura(site, usuario.getEmail());
+        return gerarCheckoutAssinatura(site, emailMp);
     }
 
-    private Map<String, Object> gerarCheckoutAssinatura(Site site, String emailNorm) {
+    /** E-mail do pagador no MP (pode ser de quem paga com cartão); senão usa o login do painel. */
+    private static String normalizarEmailPagador(String emailPagador, String emailLogin) {
+        if (emailPagador != null && !emailPagador.isBlank()) {
+            return emailPagador.trim().toLowerCase();
+        }
+        return emailLogin == null ? "" : emailLogin.trim().toLowerCase();
+    }
+
+    private Map<String, Object> gerarCheckoutAssinatura(Site site, String emailMp) {
         Map<String, String> assinatura = mercadoPagoService.criarAssinaturaMensal(
-                site.getId(), site.getSlug(), emailNorm);
+                site.getId(), site.getSlug(), emailMp);
 
         site.setMpPreapprovalId(assinatura.get("id"));
         site.setMpAssinaturaInitPoint(assinatura.get("init_point"));

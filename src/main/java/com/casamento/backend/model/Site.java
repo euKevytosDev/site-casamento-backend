@@ -1,5 +1,6 @@
 package com.casamento.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
@@ -246,9 +247,11 @@ public class Site {
     public String getPixCidade() { return pixCidade; }
     public void setPixCidade(String pixCidade) { this.pixCidade = pixCidade; }
 
+    @JsonIgnore
     public String getMpSellerAccessToken() { return mpSellerAccessToken; }
     public void setMpSellerAccessToken(String mpSellerAccessToken) { this.mpSellerAccessToken = mpSellerAccessToken; }
 
+    @JsonIgnore
     public String getMpSellerRefreshToken() { return mpSellerRefreshToken; }
     public void setMpSellerRefreshToken(String mpSellerRefreshToken) { this.mpSellerRefreshToken = mpSellerRefreshToken; }
 

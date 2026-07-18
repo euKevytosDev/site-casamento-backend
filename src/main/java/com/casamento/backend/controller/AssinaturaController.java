@@ -46,7 +46,8 @@ public class AssinaturaController {
                     str(body.get("nomeNoivo")),
                     str(body.get("slug")),
                     str(body.get("email")),
-                    str(body.get("senha"))
+                    str(body.get("senha")),
+                    str(body.get("emailPagador"))
             );
             return ResponseEntity.ok(resultado);
         } catch (IllegalArgumentException e) {
