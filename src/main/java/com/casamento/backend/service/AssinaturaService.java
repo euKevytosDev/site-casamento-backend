@@ -33,7 +33,8 @@ public class AssinaturaService {
     }
 
     /**
-     * Cadastro + um único checkout de assinatura mensal (R$ 59,90).
+     * Cadastro + checkout de assinatura mensal.
+     * Se o e-mail já existe com site ainda PENDENTE, reabre o pagamento (não bloqueia).
      */
     @Transactional
     public Map<String, Object> iniciarCheckout(
@@ -49,14 +50,23 @@ public class AssinaturaService {
         if (slugNorm.isBlank()) {
             throw new IllegalArgumentException("Informe um slug (ex: mariajoao).");
         }
-        if (siteRepository.findBySlug(slugNorm).isPresent()) {
-            throw new IllegalArgumentException("Este link já está em uso. Escolha outro (ex: maria-e-joao).");
-        }
-        if (usuarioNoivaRepository.existsByEmailIgnoreCase(emailNorm)) {
-            throw new IllegalArgumentException("Já existe uma conta com este e-mail.");
-        }
         if (senha == null || senha.length() < 6) {
             throw new IllegalArgumentException("A senha precisa ter pelo menos 6 caracteres.");
+        }
+
+        var usuarioExistente = usuarioNoivaRepository.findByEmailIgnoreCase(emailNorm);
+        if (usuarioExistente.isPresent()) {
+            Site siteExistente = usuarioExistente.get().getSite();
+            if (siteJaPagoOuAtivo(siteExistente)) {
+                throw new IllegalArgumentException(
+                        "Já existe uma conta ativa com este e-mail. Entre no painel para continuar.");
+            }
+            return retomarCheckoutPendente(
+                    usuarioExistente.get(), siteExistente, nomeNoiva, nomeNoivo, slugNorm, senha);
+        }
+
+        if (siteRepository.findBySlug(slugNorm).isPresent()) {
+            throw new IllegalArgumentException("Este link já está em uso. Escolha outro (ex: maria-e-joao).");
         }
 
         Site site = new Site();
@@ -74,12 +84,45 @@ public class AssinaturaService {
         usuario.setSite(site);
         usuarioNoivaRepository.save(usuario);
 
+        return gerarCheckoutAssinatura(site, emailNorm);
+    }
+
+    private Map<String, Object> retomarCheckoutPendente(
+            UsuarioNoiva usuario,
+            Site site,
+            String nomeNoiva,
+            String nomeNoivo,
+            String slugNorm,
+            String senha) {
+
+        // Permite trocar o slug só se estiver livre (ou for o mesmo do site)
+        if (!slugNorm.equalsIgnoreCase(site.getSlug())) {
+            var outro = siteRepository.findBySlug(slugNorm);
+            if (outro.isPresent() && !outro.get().getId().equals(site.getId())) {
+                throw new IllegalArgumentException("Este link já está em uso. Escolha outro (ex: maria-e-joao).");
+            }
+            site.setSlug(slugNorm);
+        }
+
+        site.setNomeNoiva(nomeNoiva.trim());
+        site.setNomeNoivo(nomeNoivo.trim());
+        site.setNomeCurto(nomeNoiva.trim().split("\\s+")[0] + " & " + nomeNoivo.trim().split("\\s+")[0]);
+        usuario.setSenhaHash(passwordEncoder.encode(senha));
+        usuarioNoivaRepository.save(usuario);
+        siteRepository.save(site);
+
+        return gerarCheckoutAssinatura(site, usuario.getEmail());
+    }
+
+    private Map<String, Object> gerarCheckoutAssinatura(Site site, String emailNorm) {
         Map<String, String> assinatura = mercadoPagoService.criarAssinaturaMensal(
-                site.getId(), slugNorm, emailNorm);
+                site.getId(), site.getSlug(), emailNorm);
 
         site.setMpPreapprovalId(assinatura.get("id"));
         site.setMpAssinaturaInitPoint(assinatura.get("init_point"));
         site.setMpAssinaturaStatus(assinatura.getOrDefault("status", "pending"));
+        site.setAssinaturaStatus("PENDENTE");
+        site.setAtivo(false);
         siteRepository.save(site);
 
         Map<String, Object> out = new LinkedHashMap<>();
@@ -92,7 +135,20 @@ public class AssinaturaService {
                 + mercadoPagoService.getValorMensal()
                 + "/mês no Mercado Pago para liberar seu site.");
         out.put("modoTeste", mercadoPagoService.modoTeste());
+        out.put("retomado", true);
         return out;
+    }
+
+    private static boolean siteJaPagoOuAtivo(Site site) {
+        if (site.isAtivo()) {
+            return true;
+        }
+        String st = site.getAssinaturaStatus();
+        if (st != null && "ATIVA".equalsIgnoreCase(st)) {
+            return true;
+        }
+        String mp = site.getMpAssinaturaStatus();
+        return mp != null && "authorized".equalsIgnoreCase(mp);
     }
 
     @Transactional
