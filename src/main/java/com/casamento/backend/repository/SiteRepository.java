@@ -22,4 +22,6 @@ public interface SiteRepository extends JpaRepository<Site, Long> {
      * Optional = pode existir ou não (evita NullPointerException).
      */
     Optional<Site> findBySlug(String slug);
+
+    Optional<Site> findByMpPreapprovalId(String mpPreapprovalId);
 }

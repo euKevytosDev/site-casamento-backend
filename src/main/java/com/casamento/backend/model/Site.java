@@ -110,6 +110,14 @@ public class Site {
     @Column(name = "mp_preapproval_id", length = 120)
     private String mpPreapprovalId;
 
+    /** Link do Checkout Pro da assinatura mensal (autorizar cartão). */
+    @Column(name = "mp_assinatura_init_point", length = 500)
+    private String mpAssinaturaInitPoint;
+
+    /** pending | authorized | paused | cancelled */
+    @Column(name = "mp_assinatura_status", length = 40)
+    private String mpAssinaturaStatus;
+
     @Column(name = "assinatura_inicio")
     private java.time.Instant assinaturaInicio;
 
@@ -211,6 +219,12 @@ public class Site {
 
     public String getMpPreapprovalId() { return mpPreapprovalId; }
     public void setMpPreapprovalId(String mpPreapprovalId) { this.mpPreapprovalId = mpPreapprovalId; }
+
+    public String getMpAssinaturaInitPoint() { return mpAssinaturaInitPoint; }
+    public void setMpAssinaturaInitPoint(String mpAssinaturaInitPoint) { this.mpAssinaturaInitPoint = mpAssinaturaInitPoint; }
+
+    public String getMpAssinaturaStatus() { return mpAssinaturaStatus; }
+    public void setMpAssinaturaStatus(String mpAssinaturaStatus) { this.mpAssinaturaStatus = mpAssinaturaStatus; }
 
     public java.time.Instant getAssinaturaInicio() { return assinaturaInicio; }
     public void setAssinaturaInicio(java.time.Instant assinaturaInicio) { this.assinaturaInicio = assinaturaInicio; }

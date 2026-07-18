@@ -8,16 +8,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Integração Mercado Pago — checkout da taxa de criação (R$ 99).
- * Access token via MERCADOPAGO_ACCESS_TOKEN no Render.
+ * Integração Mercado Pago:
+ * - Checkout Pro: taxa de criação (R$ 99)
+ * - Preapproval: mensalidade (R$ 49,90) a partir do 2º mês
  */
 @Service
 public class MercadoPagoService {
+
+    private static final DateTimeFormatter MP_DATE =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -26,6 +34,7 @@ public class MercadoPagoService {
     private final String backUrlSuccess;
     private final String backUrlFailure;
     private final BigDecimal valorCriacao;
+    private final BigDecimal valorMensal;
 
     public MercadoPagoService(
             ObjectMapper objectMapper,
@@ -33,13 +42,15 @@ public class MercadoPagoService {
             @Value("${mercadopago.notification-url:}") String notificationUrl,
             @Value("${mercadopago.back-url-success:}") String backUrlSuccess,
             @Value("${mercadopago.back-url-failure:}") String backUrlFailure,
-            @Value("${mercadopago.valor-criacao:99.00}") BigDecimal valorCriacao) {
+            @Value("${mercadopago.valor-criacao:99.00}") BigDecimal valorCriacao,
+            @Value("${mercadopago.valor-mensal:49.90}") BigDecimal valorMensal) {
         this.objectMapper = objectMapper;
         this.accessToken = accessToken == null ? "" : accessToken.trim();
         this.notificationUrl = notificationUrl == null ? "" : notificationUrl.trim();
         this.backUrlSuccess = backUrlSuccess == null ? "" : backUrlSuccess.trim();
         this.backUrlFailure = backUrlFailure == null ? "" : backUrlFailure.trim();
         this.valorCriacao = valorCriacao;
+        this.valorMensal = valorMensal;
         this.restClient = RestClient.builder()
                 .baseUrl("https://api.mercadopago.com")
                 .build();
@@ -53,9 +64,12 @@ public class MercadoPagoService {
         return valorCriacao;
     }
 
+    public BigDecimal getValorMensal() {
+        return valorMensal;
+    }
+
     /**
-     * Cria preferência de pagamento (Checkout Pro) para a taxa de R$ 99.
-     * @return mapa com id e init_point (URL do checkout)
+     * Preferência Checkout Pro — taxa de R$ 99 (criação + 1º mês).
      */
     public Map<String, String> criarPreferenciaCriacao(
             Long siteId,
@@ -102,6 +116,100 @@ public class MercadoPagoService {
                 .retrieve()
                 .body(String.class);
 
+        return lerPreferenciaOuPreapproval(resposta, "preferência");
+    }
+
+    /**
+     * Assinatura sem plano (pending) — mensalidade R$ 49,90.
+     * Cobrança começa 1 mês após a criação (1º mês já pago nos R$ 99).
+     * Retorna id + init_point para o casal autorizar o cartão no MP.
+     */
+    public Map<String, String> criarPreapprovalMensal(
+            Long siteId,
+            String slug,
+            String emailPagador,
+            String nomeNoiva,
+            String nomeNoivo,
+            Instant inicioAssinatura) {
+
+        if (!configurado()) {
+            throw new IllegalStateException("Mercado Pago não configurado.");
+        }
+
+        Instant base = inicioAssinatura != null ? inicioAssinatura : Instant.now();
+        Instant inicioCobranca = base.plus(30, ChronoUnit.DAYS);
+        Instant fim = base.plus(3650, ChronoUnit.DAYS); // ~10 anos (start_date exige end_date)
+
+        Map<String, Object> autoRecurring = new HashMap<>();
+        autoRecurring.put("frequency", 1);
+        autoRecurring.put("frequency_type", "months");
+        autoRecurring.put("transaction_amount", valorMensal.doubleValue());
+        autoRecurring.put("currency_id", "BRL");
+        autoRecurring.put("start_date", formatarDataMp(inicioCobranca));
+        autoRecurring.put("end_date", formatarDataMp(fim));
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("reason", "Site de Casamento — mensalidade (" + slug + ")");
+        body.put("external_reference", "site:" + siteId);
+        body.put("payer_email", emailPagador);
+        body.put("auto_recurring", autoRecurring);
+        body.put("status", "pending");
+        if (!backUrlSuccess.isBlank()) {
+            body.put("back_url", backUrlSuccess);
+        } else {
+            body.put("back_url", "https://eukevytosdev.github.io/site-casamento-landing/sucesso.html");
+        }
+        if (!notificationUrl.isBlank()) {
+            body.put("notification_url", notificationUrl);
+        }
+
+        String resposta = restClient.post()
+                .uri("/preapproval")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + accessToken)
+                .body(body)
+                .retrieve()
+                .body(String.class);
+
+        Map<String, String> out = lerPreferenciaOuPreapproval(resposta, "assinatura");
+        try {
+            JsonNode json = objectMapper.readTree(resposta);
+            out.put("status", json.path("status").asText("pending"));
+        } catch (Exception ignored) {
+            out.putIfAbsent("status", "pending");
+        }
+        return out;
+    }
+
+    public JsonNode buscarPagamento(String paymentId) {
+        return getJson("/v1/payments/{id}", paymentId);
+    }
+
+    public JsonNode buscarPreapproval(String preapprovalId) {
+        return getJson("/preapproval/{id}", preapprovalId);
+    }
+
+    public JsonNode buscarAuthorizedPayment(String authorizedPaymentId) {
+        return getJson("/authorized_payments/{id}", authorizedPaymentId);
+    }
+
+    private JsonNode getJson(String uri, String id) {
+        if (!configurado()) {
+            throw new IllegalStateException("Mercado Pago não configurado.");
+        }
+        String resposta = restClient.get()
+                .uri(uri, id)
+                .header("Authorization", "Bearer " + accessToken)
+                .retrieve()
+                .body(String.class);
+        try {
+            return objectMapper.readTree(resposta);
+        } catch (Exception e) {
+            throw new IllegalStateException("Não foi possível ler recurso MP " + id, e);
+        }
+    }
+
+    private Map<String, String> lerPreferenciaOuPreapproval(String resposta, String rotulo) {
         try {
             JsonNode json = objectMapper.readTree(resposta);
             Map<String, String> out = new HashMap<>();
@@ -111,25 +219,18 @@ public class MercadoPagoService {
                 init = json.path("sandbox_init_point").asText();
             }
             out.put("init_point", init);
+            if (out.get("id") == null || out.get("id").isBlank()) {
+                throw new IllegalStateException("Resposta do Mercado Pago sem id (" + rotulo + ").");
+            }
             return out;
+        } catch (IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
-            throw new IllegalStateException("Resposta inválida do Mercado Pago ao criar preferência.", e);
+            throw new IllegalStateException("Resposta inválida do Mercado Pago ao criar " + rotulo + ".", e);
         }
     }
 
-    public JsonNode buscarPagamento(String paymentId) {
-        if (!configurado()) {
-            throw new IllegalStateException("Mercado Pago não configurado.");
-        }
-        String resposta = restClient.get()
-                .uri("/v1/payments/{id}", paymentId)
-                .header("Authorization", "Bearer " + accessToken)
-                .retrieve()
-                .body(String.class);
-        try {
-            return objectMapper.readTree(resposta);
-        } catch (Exception e) {
-            throw new IllegalStateException("Não foi possível ler o pagamento " + paymentId, e);
-        }
+    private static String formatarDataMp(Instant instant) {
+        return MP_DATE.format(instant.atOffset(ZoneOffset.of("-03:00")));
     }
 }

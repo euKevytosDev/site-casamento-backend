@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 /**
- * Webhooks do Mercado Pago (pagamento da taxa de criação).
- * Configure notification_url apontando para /api/webhooks/mercadopago
+ * Webhooks do Mercado Pago (criação R$ 99 + assinatura mensal).
+ * notification_url → /api/webhooks/mercadopago
  */
 @RestController
 @RequestMapping("/api/webhooks")
@@ -35,21 +35,34 @@ public class MercadoPagoWebhookController {
 
         try {
             String tipo = type != null ? type : topic;
-            String pagamentoId = dataId != null ? dataId : id;
+            String recursoId = dataId != null ? dataId : id;
 
-            if ((pagamentoId == null || pagamentoId.isBlank()) && body != null && !body.isBlank()) {
+            if ((recursoId == null || recursoId.isBlank()) && body != null && !body.isBlank()) {
                 JsonNode json = objectMapper.readTree(body);
-                if (pagamentoId == null || pagamentoId.isBlank()) {
-                    pagamentoId = json.path("data").path("id").asText(null);
+                if (recursoId == null || recursoId.isBlank()) {
+                    recursoId = json.path("data").path("id").asText(null);
                 }
                 if (tipo == null || tipo.isBlank()) {
                     tipo = json.path("type").asText(json.path("topic").asText(""));
                 }
             }
 
-            if (pagamentoId != null && !pagamentoId.isBlank()
-                    && (tipo == null || tipo.isBlank() || "payment".equalsIgnoreCase(tipo))) {
-                assinaturaService.processarPagamentoAprovado(pagamentoId);
+            if (recursoId == null || recursoId.isBlank()) {
+                return ResponseEntity.ok("ok");
+            }
+
+            String t = tipo == null ? "" : tipo.toLowerCase();
+
+            if (t.isBlank() || "payment".equals(t)) {
+                assinaturaService.processarPagamentoAprovado(recursoId);
+            } else if ("subscription_preapproval".equals(t)
+                    || "subscription".equals(t)
+                    || "preapproval".equals(t)) {
+                assinaturaService.processarPreapproval(recursoId);
+            } else if ("subscription_authorized_payment".equals(t)
+                    || "subscription_authorized".equals(t)
+                    || "authorized_payment".equals(t)) {
+                assinaturaService.processarAuthorizedPayment(recursoId);
             }
         } catch (Exception ignored) {
             // Sempre 200 para o MP não reenviar em loop agressivo por erro nosso
@@ -60,12 +73,18 @@ public class MercadoPagoWebhookController {
 
     @GetMapping("/mercadopago")
     public ResponseEntity<String> ping(@RequestParam Map<String, String> params) {
-        // Alguns ambientes fazem GET de verificação
-        String topic = params.getOrDefault("topic", params.get("type"));
+        String topic = params.getOrDefault("topic", params.getOrDefault("type", ""));
         String id = params.getOrDefault("data.id", params.get("id"));
-        if (id != null && (topic == null || "payment".equalsIgnoreCase(topic))) {
+        if (id != null && !id.isBlank()) {
             try {
-                assinaturaService.processarPagamentoAprovado(id);
+                String t = topic == null ? "" : topic.toLowerCase();
+                if (t.isBlank() || "payment".equals(t)) {
+                    assinaturaService.processarPagamentoAprovado(id);
+                } else if (t.contains("preapproval") || "subscription".equals(t)) {
+                    assinaturaService.processarPreapproval(id);
+                } else if (t.contains("authorized")) {
+                    assinaturaService.processarAuthorizedPayment(id);
+                }
             } catch (Exception ignored) {
             }
         }
