@@ -21,6 +21,13 @@ public class FileStorageService {
             "image/jpeg", "image/png", "image/webp", "image/gif"
     );
 
+    /**
+     * Limite no lado maior: sobra nitidez no celular/desktop estreito
+     * e corta peso de fotos 4K da câmera/galeria.
+     */
+    private static final int LARGURA_MAX = 1600;
+    private static final int ALTURA_MAX = 2000;
+
     private final Cloudinary cloudinary;
     private final String pastaCloudinary;
     private final Path uploadDirLegado = Paths.get("uploads/presentes").toAbsolutePath().normalize();
@@ -43,13 +50,22 @@ public class FileStorageService {
         String pastaFinal = (pasta == null || pasta.isBlank()) ? pastaCloudinary : pasta.trim();
 
         try {
+            // Comprime/redimensiona NA ENTRADA: o que fica salvo no Cloudinary já é leve.
+            // crop=limit → só reduz se for maior; não estica foto pequena.
+            // q_auto:good → boa qualidade visual com arquivo bem menor.
             @SuppressWarnings("unchecked")
             Map<String, Object> resultado = cloudinary.uploader().upload(
                     arquivo.getBytes(),
                     ObjectUtils.asMap(
                             "folder", pastaFinal,
                             "public_id", UUID.randomUUID().toString(),
-                            "resource_type", "image"
+                            "resource_type", "image",
+                            "transformation", ObjectUtils.asMap(
+                                    "width", LARGURA_MAX,
+                                    "height", ALTURA_MAX,
+                                    "crop", "limit",
+                                    "quality", "auto:good"
+                            )
                     )
             );
 
