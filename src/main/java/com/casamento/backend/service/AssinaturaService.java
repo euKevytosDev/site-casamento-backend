@@ -68,6 +68,9 @@ public class AssinaturaService {
         if (siteRepository.findBySlug(slugNorm).isPresent()) {
             throw new IllegalArgumentException("Este link já está em uso. Escolha outro (ex: maria-e-joao).");
         }
+        if (slugReservado(slugNorm)) {
+            throw new IllegalArgumentException("Este link é reservado. Escolha outro (ex: maria-e-joao).");
+        }
 
         Site site = new Site();
         site.setSlug(slugNorm);
@@ -99,6 +102,9 @@ public class AssinaturaService {
 
         // Permite trocar o slug só se estiver livre (ou for o mesmo do site)
         if (!slugNorm.equalsIgnoreCase(site.getSlug())) {
+            if (slugReservado(slugNorm)) {
+                throw new IllegalArgumentException("Este link é reservado. Escolha outro (ex: maria-e-joao).");
+            }
             var outro = siteRepository.findBySlug(slugNorm);
             if (outro.isPresent() && !outro.get().getId().equals(site.getId())) {
                 throw new IllegalArgumentException("Este link já está em uso. Escolha outro (ex: maria-e-joao).");
@@ -168,7 +174,7 @@ public class AssinaturaService {
             }
         }
 
-        if (site == null || "rafaekevin".equalsIgnoreCase(site.getSlug())) {
+        if (site == null || slugReservado(site.getSlug())) {
             return;
         }
 
@@ -189,7 +195,7 @@ public class AssinaturaService {
         if (site == null) {
             site = siteRepository.findByMpPreapprovalId(preapprovalId).orElse(null);
         }
-        if (site == null || "rafaekevin".equalsIgnoreCase(site.getSlug())) {
+        if (site == null || slugReservado(site.getSlug())) {
             return;
         }
 
@@ -225,7 +231,7 @@ public class AssinaturaService {
         }
 
         Site site = siteRepository.findByMpPreapprovalId(preapprovalId).orElse(null);
-        if (site == null || "rafaekevin".equalsIgnoreCase(site.getSlug())) {
+        if (site == null || slugReservado(site.getSlug())) {
             return;
         }
 
@@ -244,7 +250,7 @@ public class AssinaturaService {
     @Transactional
     public void desativarPorFaltaPagamento(Long siteId) {
         siteRepository.findById(siteId).ifPresent(site -> {
-            if ("rafaekevin".equalsIgnoreCase(site.getSlug())) {
+            if (slugReservado(site.getSlug())) {
                 return;
             }
             site.setAtivo(false);
@@ -290,5 +296,10 @@ public class AssinaturaService {
     private static String normalizarSlug(String slug) {
         if (slug == null) return "";
         return slug.trim().toLowerCase().replaceAll("[^a-z0-9-]", "");
+    }
+
+    /** Slugs do produto (vitrine + template) — não podem ser usados por cliente. */
+    private static boolean slugReservado(String slug) {
+        return "rafaekevin".equals(slug) || "modelo".equals(slug) || "admin".equals(slug);
     }
 }

@@ -10,8 +10,11 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.Arrays;
 
-@Component  // Spring executa ao subir
+@Component
 public class SiteDataInitializer implements CommandLineRunner {
+
+    private static final String VERSICULO_PADRAO =
+            "\"Assim, eles já não são dois, mas sim uma só carne. Portanto, o que Deus uniu, ninguém separe.\" Mateus 19:6";
 
     @Autowired
     private SiteRepository siteRepository;
@@ -21,12 +24,16 @@ public class SiteDataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // Não roda nos testes automatizados
         if (Arrays.asList(environment.getActiveProfiles()).contains("test")) {
             return;
         }
 
-        // Se já existe, não cria de novo
+        garantirRafaekevin();
+        garantirModelo();
+    }
+
+    /** Site vitrine (demo de venda) — só cria se ainda não existir. */
+    private void garantirRafaekevin() {
         if (siteRepository.findBySlug("rafaekevin").isPresent()) {
             return;
         }
@@ -35,10 +42,39 @@ public class SiteDataInitializer implements CommandLineRunner {
         site.setSlug("rafaekevin");
         site.setNomeNoiva("Rafaella");
         site.setNomeNoivo("Kevin");
+        site.setNomeCurto("Rafa & Kevin");
         site.setDataCasamento(LocalDate.of(2027, 4, 24));
+        site.setHoraCasamento("16:00");
+        site.setDiaSemana("SÁBADO");
+        site.setMesExtenso("ABRIL");
+        site.setVersiculo(VERSICULO_PADRAO);
+        site.setFraseBencao("Com a bênção de Deus e nossos pais");
         site.setAtivo(true);
-
+        site.setAssinaturaStatus("ATIVA");
         siteRepository.save(site);
-        // Depois que salvar, o site ganha um id (1, 2, ...)
+    }
+
+    /**
+     * Template em branco para a noiva ver o layout sem fotos do casal demo.
+     * Sem imagens: o front mostra placeholders.
+     */
+    private void garantirModelo() {
+        if (siteRepository.findBySlug("modelo").isPresent()) {
+            return;
+        }
+
+        Site site = new Site();
+        site.setSlug("modelo");
+        site.setNomeNoiva("Noiva");
+        site.setNomeNoivo("Noivo");
+        site.setNomeCurto("Seu casamento");
+        site.setVersiculo(VERSICULO_PADRAO);
+        site.setFraseBencao("Com a bênção de Deus e nossos pais");
+        site.setPaisNoiva("Pais da noiva");
+        site.setPaisNoivo("Pais do noivo");
+        site.setLocalNome("Local da celebração");
+        site.setAtivo(true);
+        site.setAssinaturaStatus("ATIVA");
+        siteRepository.save(site);
     }
 }
