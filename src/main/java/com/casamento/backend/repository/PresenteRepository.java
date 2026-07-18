@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 public interface PresenteRepository extends JpaRepository<PresenteCasamento, Long> {
 
     List<PresenteCasamento> findBySiteId(Long siteId);
+
+    long countBySiteId(Long siteId);
 }

@@ -1,6 +1,7 @@
 package com.casamento.backend.controller;
 
 import com.casamento.backend.config.SiteContext;
+import com.casamento.backend.config.SiteLimites;
 import com.casamento.backend.model.Site;
 import com.casamento.backend.repository.SiteRepository;
 import com.casamento.backend.service.FileStorageService;
@@ -169,8 +170,9 @@ public class AdminSitePersonalizacaoController {
                     if (carrosselIndex != null && carrosselIndex >= 0 && carrosselIndex < fotos.size()) {
                         trocarUrl(fotos.get(carrosselIndex), url);
                         fotos.set(carrosselIndex, url);
-                    } else if (fotos.size() >= 8) {
-                        return ResponseEntity.badRequest().body("Máximo de 8 fotos no carrossel.");
+                    } else if (fotos.size() >= SiteLimites.MAX_FOTOS_CARROSSEL) {
+                        return ResponseEntity.badRequest()
+                                .body("Máximo de " + SiteLimites.MAX_FOTOS_CARROSSEL + " fotos no carrossel.");
                     } else {
                         fotos.add(url);
                     }

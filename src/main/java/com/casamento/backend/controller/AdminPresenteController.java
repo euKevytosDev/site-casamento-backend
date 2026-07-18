@@ -1,6 +1,7 @@
 package com.casamento.backend.controller;
 
 import com.casamento.backend.config.SiteContext;
+import com.casamento.backend.config.SiteLimites;
 import com.casamento.backend.model.PresenteCasamento;
 import com.casamento.backend.model.Site;
 import com.casamento.backend.repository.PresenteRepository;
@@ -72,6 +73,15 @@ public class AdminPresenteController {
         Site site = siteAtual();
         if (site == null) {
             return semSite();
+        }
+
+        if (!SiteLimites.semLimitePresentes(site)) {
+            long total = presenteRepository.countBySiteId(site.getId());
+            if (total >= SiteLimites.MAX_PRESENTES_CLIENTE) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Limite de " + SiteLimites.MAX_PRESENTES_CLIENTE
+                                + " presentes atingido neste site.");
+            }
         }
 
         try {
