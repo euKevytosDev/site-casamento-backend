@@ -58,15 +58,20 @@ public class FileStorageService {
                             "folder", pastaFinal,
                             "public_id", UUID.randomUUID().toString(),
                             "resource_type", "image",
-                            "transformation", ObjectUtils.asMap(
-                                    "width", LARGURA_MAX,
-                                    "height", ALTURA_MAX,
-                                    "crop", "limit",
-                                    "quality", "auto:good"
-                            )
+                            "overwrite", false
                     )
             );
-            return (String) resultado.get("secure_url");
+            String url = (String) resultado.get("secure_url");
+            if (url == null || url.isBlank()) {
+                throw new IOException("Cloudinary não retornou URL da imagem.");
+            }
+            // Otimiza via URL de transformação (não na hora do upload — evita erro em PNG minúsculo/etc.)
+            return url.replace(
+                    "/image/upload/",
+                    "/image/upload/c_limit,w_" + LARGURA_MAX + ",h_" + ALTURA_MAX + ",q_auto:good/"
+            );
+        } catch (IOException e) {
+            throw e;
         } catch (Exception e) {
             throw new IOException(mensagemCloudinary("imagem", e), e);
         }
@@ -210,12 +215,15 @@ public class FileStorageService {
         if (detalhe == null || detalhe.isBlank()) {
             detalhe = e.getClass().getSimpleName();
         }
-        if (detalhe.toLowerCase(Locale.ROOT).contains("invalid")
-                || detalhe.toLowerCase(Locale.ROOT).contains("api_key")
-                || detalhe.toLowerCase(Locale.ROOT).contains("401")
-                || detalhe.toLowerCase(Locale.ROOT).contains("unauthorized")) {
+        String lower = detalhe.toLowerCase(Locale.ROOT);
+        if (lower.contains("api_key")
+                || lower.contains("api key")
+                || lower.contains("unauthorized")
+                || lower.contains("invalid signature")
+                || lower.contains("401")) {
             return "Falha ao enviar " + tipo + ": credenciais do Cloudinary inválidas. "
-                    + "Confira CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET no Render.";
+                    + "Confira CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET no Render. "
+                    + "Detalhe: " + detalhe;
         }
         return "Falha ao enviar " + tipo + ": " + detalhe;
     }
