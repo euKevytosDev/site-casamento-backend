@@ -28,7 +28,8 @@ public class AssinaturaController {
                 "descricaoMensal", "Plano único — assinatura mensal",
                 "permanenciaMinimaMeses", mercadoPagoService.getPermanenciaMinimaMeses(),
                 "arrependimentoDias", 7,
-                "mpConfigurado", mercadoPagoService.configurado()
+                "mpConfigurado", mercadoPagoService.configurado(),
+                "modoTeste", mercadoPagoService.modoTeste()
         );
     }
 

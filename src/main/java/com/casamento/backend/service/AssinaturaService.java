@@ -91,6 +91,7 @@ public class AssinaturaService {
         out.put("mensagem", "Autorize a assinatura de R$ "
                 + mercadoPagoService.getValorMensal()
                 + "/mês no Mercado Pago para liberar seu site.");
+        out.put("modoTeste", mercadoPagoService.modoTeste());
         return out;
     }
 

@@ -54,6 +54,11 @@ public class MercadoPagoService {
         return !accessToken.isBlank();
     }
 
+    /** true se o Access Token for de teste (TEST-...). */
+    public boolean modoTeste() {
+        return accessToken.startsWith("TEST-");
+    }
+
     public BigDecimal getValorMensal() {
         return valorMensal;
     }
@@ -208,11 +213,12 @@ public class MercadoPagoService {
 
             String sandbox = json.path("sandbox_init_point").asText("");
             String prod = json.path("init_point").asText("");
-            // Token de teste → prioriza sandbox (senão o MP manda para produção)
             String init;
-            if (accessToken.startsWith("TEST-") && sandbox != null && !sandbox.isBlank()) {
-                init = sandbox;
-            } else if (prod != null && !prod.isBlank()) {
+            if (modoTeste()) {
+                // Assinaturas às vezes só devolve init_point de produção — forçamos sandbox no teste
+                init = !sandbox.isBlank() ? sandbox : prod;
+                init = forcarSandbox(init);
+            } else if (!prod.isBlank()) {
                 init = prod;
             } else {
                 init = sandbox;
@@ -232,5 +238,15 @@ public class MercadoPagoService {
         } catch (Exception e) {
             throw new IllegalStateException("Resposta inválida do Mercado Pago ao criar assinatura.", e);
         }
+    }
+
+    private static String forcarSandbox(String url) {
+        if (url == null || url.isBlank()) {
+            return url;
+        }
+        return url
+                .replace("https://www.mercadopago.com.br", "https://sandbox.mercadopago.com.br")
+                .replace("https://www.mercadopago.com", "https://sandbox.mercadopago.com")
+                .replace("https://mercadopago.com.br", "https://sandbox.mercadopago.com.br");
     }
 }
