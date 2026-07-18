@@ -51,6 +51,14 @@ public class Site {
     @Column(name = "maps_url", length = 500)
     private String mapsUrl;
 
+    /** Versículo bíblico exibido no convite */
+    @Column(name = "versiculo", columnDefinition = "TEXT")
+    private String versiculo;
+
+    /** Frase acima dos nomes dos pais (ex.: Com a bênção de Deus...) */
+    @Column(name = "frase_bencao", length = 300)
+    private String fraseBencao;
+
     @Column(name = "foto_hero_url", length = 500)
     private String fotoHeroUrl;
 
@@ -170,6 +178,12 @@ public class Site {
 
     public String getMapsUrl() { return mapsUrl; }
     public void setMapsUrl(String mapsUrl) { this.mapsUrl = mapsUrl; }
+
+    public String getVersiculo() { return versiculo; }
+    public void setVersiculo(String versiculo) { this.versiculo = versiculo; }
+
+    public String getFraseBencao() { return fraseBencao; }
+    public void setFraseBencao(String fraseBencao) { this.fraseBencao = fraseBencao; }
 
     public String getFotoHeroUrl() { return fotoHeroUrl; }
     public void setFotoHeroUrl(String fotoHeroUrl) { this.fotoHeroUrl = fotoHeroUrl; }

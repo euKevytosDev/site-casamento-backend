@@ -20,6 +20,8 @@ public class SiteConfigResponse {
     private String paisNoivo;
     private String localNome;
     private String mapsUrl;
+    private String versiculo;
+    private String fraseBencao;
     private String fotoHeroUrl;
     private String fotoSecundariaUrl;
     private String fotoLocalUrl;
@@ -66,6 +68,12 @@ public class SiteConfigResponse {
 
     public String getMapsUrl() { return mapsUrl; }
     public void setMapsUrl(String mapsUrl) { this.mapsUrl = mapsUrl; }
+
+    public String getVersiculo() { return versiculo; }
+    public void setVersiculo(String versiculo) { this.versiculo = versiculo; }
+
+    public String getFraseBencao() { return fraseBencao; }
+    public void setFraseBencao(String fraseBencao) { this.fraseBencao = fraseBencao; }
 
     public String getFotoHeroUrl() { return fotoHeroUrl; }
     public void setFotoHeroUrl(String fotoHeroUrl) { this.fotoHeroUrl = fotoHeroUrl; }

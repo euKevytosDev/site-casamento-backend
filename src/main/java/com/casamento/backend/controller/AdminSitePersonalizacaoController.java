@@ -97,6 +97,12 @@ public class AdminSitePersonalizacaoController {
         if (body.containsKey("mapsUrl")) {
             site.setMapsUrl(blankToNull(asString(body.get("mapsUrl"))));
         }
+        if (body.containsKey("versiculo")) {
+            site.setVersiculo(blankToNull(asString(body.get("versiculo"))));
+        }
+        if (body.containsKey("fraseBencao")) {
+            site.setFraseBencao(blankToNull(asString(body.get("fraseBencao"))));
+        }
         if (body.containsKey("pixChave")) {
             site.setPixChave(blankToNull(asString(body.get("pixChave"))));
         }

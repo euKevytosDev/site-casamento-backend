@@ -74,6 +74,8 @@ public class AssinaturaService {
         site.setNomeNoiva(nomeNoiva.trim());
         site.setNomeNoivo(nomeNoivo.trim());
         site.setNomeCurto(nomeNoiva.trim().split("\\s+")[0] + " & " + nomeNoivo.trim().split("\\s+")[0]);
+        site.setVersiculo("\"Assim, eles já não são dois, mas sim uma só carne. Portanto, o que Deus uniu, ninguém separe.\" Mateus 19:6");
+        site.setFraseBencao("Com a bênção de Deus e nossos pais");
         site.setAtivo(false);
         site.setAssinaturaStatus("PENDENTE");
         site = siteRepository.save(site);

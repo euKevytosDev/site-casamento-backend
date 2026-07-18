@@ -34,6 +34,8 @@ public class SiteConfigService {
         r.setPaisNoivo(site.getPaisNoivo());
         r.setLocalNome(site.getLocalNome());
         r.setMapsUrl(site.getMapsUrl());
+        r.setVersiculo(site.getVersiculo());
+        r.setFraseBencao(site.getFraseBencao());
         r.setFotoHeroUrl(site.getFotoHeroUrl());
         r.setFotoSecundariaUrl(site.getFotoSecundariaUrl());
         r.setFotoLocalUrl(site.getFotoLocalUrl());
