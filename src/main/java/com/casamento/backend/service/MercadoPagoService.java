@@ -205,10 +205,19 @@ public class MercadoPagoService {
             JsonNode json = objectMapper.readTree(resposta);
             Map<String, String> out = new HashMap<>();
             out.put("id", json.path("id").asText());
-            String init = json.path("init_point").asText();
-            if (init == null || init.isBlank()) {
-                init = json.path("sandbox_init_point").asText();
+
+            String sandbox = json.path("sandbox_init_point").asText("");
+            String prod = json.path("init_point").asText("");
+            // Token de teste → prioriza sandbox (senão o MP manda para produção)
+            String init;
+            if (accessToken.startsWith("TEST-") && sandbox != null && !sandbox.isBlank()) {
+                init = sandbox;
+            } else if (prod != null && !prod.isBlank()) {
+                init = prod;
+            } else {
+                init = sandbox;
             }
+
             out.put("init_point", init);
             out.put("status", json.path("status").asText("pending"));
             if (out.get("id") == null || out.get("id").isBlank()) {
