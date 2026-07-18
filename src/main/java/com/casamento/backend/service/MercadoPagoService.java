@@ -211,18 +211,11 @@ public class MercadoPagoService {
             Map<String, String> out = new HashMap<>();
             out.put("id", json.path("id").asText());
 
+            // Assinaturas: NÃO reescrever para sandbox.* — isso gera 404.
+            // Com token TEST-, o MP trata a cobrança como teste mesmo no init_point oficial.
             String sandbox = json.path("sandbox_init_point").asText("");
             String prod = json.path("init_point").asText("");
-            String init;
-            if (modoTeste()) {
-                // Assinaturas às vezes só devolve init_point de produção — forçamos sandbox no teste
-                init = !sandbox.isBlank() ? sandbox : prod;
-                init = forcarSandbox(init);
-            } else if (!prod.isBlank()) {
-                init = prod;
-            } else {
-                init = sandbox;
-            }
+            String init = !prod.isBlank() ? prod : sandbox;
 
             out.put("init_point", init);
             out.put("status", json.path("status").asText("pending"));
@@ -238,15 +231,5 @@ public class MercadoPagoService {
         } catch (Exception e) {
             throw new IllegalStateException("Resposta inválida do Mercado Pago ao criar assinatura.", e);
         }
-    }
-
-    private static String forcarSandbox(String url) {
-        if (url == null || url.isBlank()) {
-            return url;
-        }
-        return url
-                .replace("https://www.mercadopago.com.br", "https://sandbox.mercadopago.com.br")
-                .replace("https://www.mercadopago.com", "https://sandbox.mercadopago.com")
-                .replace("https://mercadopago.com.br", "https://sandbox.mercadopago.com.br");
     }
 }
