@@ -23,6 +23,7 @@ public class SiteConfigResponse {
     private String fotoHeroUrl;
     private String fotoSecundariaUrl;
     private String fotoLocalUrl;
+    private String fotoRodapeUrl;
     private List<String> fotosCarrossel;
     private Map<String, String> cores;
     private String pixChave;
@@ -74,6 +75,9 @@ public class SiteConfigResponse {
 
     public String getFotoLocalUrl() { return fotoLocalUrl; }
     public void setFotoLocalUrl(String fotoLocalUrl) { this.fotoLocalUrl = fotoLocalUrl; }
+
+    public String getFotoRodapeUrl() { return fotoRodapeUrl; }
+    public void setFotoRodapeUrl(String fotoRodapeUrl) { this.fotoRodapeUrl = fotoRodapeUrl; }
 
     public List<String> getFotosCarrossel() { return fotosCarrossel; }
     public void setFotosCarrossel(List<String> fotosCarrossel) { this.fotosCarrossel = fotosCarrossel; }

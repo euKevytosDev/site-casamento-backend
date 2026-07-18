@@ -60,6 +60,10 @@ public class Site {
     @Column(name = "foto_local_url", length = 500)
     private String fotoLocalUrl;
 
+    /** Foto final do rodapé (bloco .fotodois) */
+    @Column(name = "foto_rodape_url", length = 500)
+    private String fotoRodapeUrl;
+
     /** JSON array de URLs: ["https://...","https://..."] */
     @Column(name = "fotos_carrossel", columnDefinition = "TEXT")
     private String fotosCarrossel;
@@ -175,6 +179,9 @@ public class Site {
 
     public String getFotoLocalUrl() { return fotoLocalUrl; }
     public void setFotoLocalUrl(String fotoLocalUrl) { this.fotoLocalUrl = fotoLocalUrl; }
+
+    public String getFotoRodapeUrl() { return fotoRodapeUrl; }
+    public void setFotoRodapeUrl(String fotoRodapeUrl) { this.fotoRodapeUrl = fotoRodapeUrl; }
 
     public String getFotosCarrossel() { return fotosCarrossel; }
     public void setFotosCarrossel(String fotosCarrossel) { this.fotosCarrossel = fotosCarrossel; }
