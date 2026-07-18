@@ -109,6 +109,19 @@ public class Site {
     @Column(name = "pix_cidade")
     private String pixCidade;
 
+    /** Access Token OAuth da conta Mercado Pago da noiva (presentes no cartão). */
+    @Column(name = "mp_seller_access_token", length = 500)
+    private String mpSellerAccessToken;
+
+    @Column(name = "mp_seller_refresh_token", length = 500)
+    private String mpSellerRefreshToken;
+
+    @Column(name = "mp_seller_user_id", length = 80)
+    private String mpSellerUserId;
+
+    @Column(name = "mp_seller_conectado_em")
+    private java.time.Instant mpSellerConectadoEm;
+
     /** Caminho/URL da música de fundo (ex.: musicas/Blessings.mp3) */
     @Column(name = "musica_url", length = 500)
     private String musicaUrl;
@@ -232,6 +245,22 @@ public class Site {
 
     public String getPixCidade() { return pixCidade; }
     public void setPixCidade(String pixCidade) { this.pixCidade = pixCidade; }
+
+    public String getMpSellerAccessToken() { return mpSellerAccessToken; }
+    public void setMpSellerAccessToken(String mpSellerAccessToken) { this.mpSellerAccessToken = mpSellerAccessToken; }
+
+    public String getMpSellerRefreshToken() { return mpSellerRefreshToken; }
+    public void setMpSellerRefreshToken(String mpSellerRefreshToken) { this.mpSellerRefreshToken = mpSellerRefreshToken; }
+
+    public String getMpSellerUserId() { return mpSellerUserId; }
+    public void setMpSellerUserId(String mpSellerUserId) { this.mpSellerUserId = mpSellerUserId; }
+
+    public java.time.Instant getMpSellerConectadoEm() { return mpSellerConectadoEm; }
+    public void setMpSellerConectadoEm(java.time.Instant mpSellerConectadoEm) { this.mpSellerConectadoEm = mpSellerConectadoEm; }
+
+    public boolean isMpSellerConectado() {
+        return mpSellerAccessToken != null && !mpSellerAccessToken.isBlank();
+    }
 
     public String getMusicaUrl() { return musicaUrl; }
     public void setMusicaUrl(String musicaUrl) { this.musicaUrl = musicaUrl; }

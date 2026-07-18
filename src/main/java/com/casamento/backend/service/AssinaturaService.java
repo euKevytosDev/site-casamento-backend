@@ -166,6 +166,9 @@ public class AssinaturaService {
         String status = pagamento.path("status").asText("");
 
         String external = pagamento.path("external_reference").asText("");
+        if (external.startsWith("pedido:")) {
+            return; // presente do casal — tratado em PresenteService
+        }
         Site site = resolverSitePorExternal(external);
 
         if (site == null) {

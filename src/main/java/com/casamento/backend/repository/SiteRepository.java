@@ -24,4 +24,6 @@ public interface SiteRepository extends JpaRepository<Site, Long> {
     Optional<Site> findBySlug(String slug);
 
     Optional<Site> findByMpPreapprovalId(String mpPreapprovalId);
+
+    Optional<Site> findByMpSellerUserId(String mpSellerUserId);
 }

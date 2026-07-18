@@ -80,6 +80,31 @@ public class PresenteController {
         }
     }
 
+    @PostMapping("/checkout-cartao")
+    public ResponseEntity<?> checkoutCartao(@RequestBody CompraCarrinhoRequest request) {
+        try {
+            return ResponseEntity.ok(presenteService.iniciarCheckoutCartao(request));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/confirmar-pagamento-mp")
+    public ResponseEntity<?> confirmarPagamentoMp(@RequestBody Map<String, Object> body) {
+        try {
+            Long pedidoId = body.get("pedidoId") == null ? null : Long.valueOf(String.valueOf(body.get("pedidoId")));
+            String paymentId = body.get("paymentId") == null ? null : String.valueOf(body.get("paymentId"));
+            if (pedidoId == null || paymentId == null || paymentId.isBlank() || "null".equals(paymentId)) {
+                return ResponseEntity.badRequest().body("Informe pedidoId e paymentId.");
+            }
+            return ResponseEntity.ok(presenteService.confirmarPagamentoRetorno(pedidoId, paymentId));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Não foi possível confirmar o pagamento.");
+        }
+    }
+
     @PostMapping("/{id}/comprar")
     public ResponseEntity<?> comprar(
             @PathVariable Long id,

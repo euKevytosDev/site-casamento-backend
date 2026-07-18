@@ -32,6 +32,7 @@ public class SiteConfigResponse {
     private String pixNomeRecebedor;
     private String pixCidade;
     private String musicaUrl;
+    private boolean mpCartaoDisponivel;
 
     public String getSiteId() { return siteId; }
     public void setSiteId(String siteId) { this.siteId = siteId; }
@@ -104,4 +105,7 @@ public class SiteConfigResponse {
 
     public String getMusicaUrl() { return musicaUrl; }
     public void setMusicaUrl(String musicaUrl) { this.musicaUrl = musicaUrl; }
+
+    public boolean isMpCartaoDisponivel() { return mpCartaoDisponivel; }
+    public void setMpCartaoDisponivel(boolean mpCartaoDisponivel) { this.mpCartaoDisponivel = mpCartaoDisponivel; }
 }

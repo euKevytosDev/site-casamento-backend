@@ -5,14 +5,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Integração Mercado Pago — plano único recorrente (Assinaturas / preapproval).
+ * Integração Mercado Pago:
+ * - Assinatura SaaS (token da plataforma)
+ * - Presentes no cartão (token OAuth da noiva)
  */
 @Service
 public class MercadoPagoService {
@@ -26,6 +35,10 @@ public class MercadoPagoService {
     private final BigDecimal valorMensal;
     private final int permanenciaMinimaMeses;
     private final String preapprovalPlanIdConfigurado;
+    private final String oauthClientId;
+    private final String oauthClientSecret;
+    private final String oauthRedirectUri;
+    private final String adminFrontUrl;
     private volatile String preapprovalPlanIdCache;
 
     public MercadoPagoService(
@@ -35,8 +48,12 @@ public class MercadoPagoService {
             @Value("${mercadopago.back-url-success:}") String backUrlSuccess,
             @Value("${mercadopago.back-url-failure:}") String backUrlFailure,
             @Value("${mercadopago.valor-mensal:59.90}") BigDecimal valorMensal,
-            @Value("${mercadopago.permanencia-minima-meses:6}") int permanenciaMinimaMeses,
-            @Value("${mercadopago.preapproval-plan-id:}") String preapprovalPlanId) {
+            @Value("${mercadopago.permanencia-minima-meses:0}") int permanenciaMinimaMeses,
+            @Value("${mercadopago.preapproval-plan-id:}") String preapprovalPlanId,
+            @Value("${mercadopago.oauth.client-id:}") String oauthClientId,
+            @Value("${mercadopago.oauth.client-secret:}") String oauthClientSecret,
+            @Value("${mercadopago.oauth.redirect-uri:}") String oauthRedirectUri,
+            @Value("${mercadopago.admin-front-url:https://rafaekevin.com.br/admin/painel.html}") String adminFrontUrl) {
         this.objectMapper = objectMapper;
         this.accessToken = accessToken == null ? "" : accessToken.trim();
         this.notificationUrl = notificationUrl == null ? "" : notificationUrl.trim();
@@ -45,6 +62,12 @@ public class MercadoPagoService {
         this.valorMensal = valorMensal;
         this.permanenciaMinimaMeses = permanenciaMinimaMeses;
         this.preapprovalPlanIdConfigurado = preapprovalPlanId == null ? "" : preapprovalPlanId.trim();
+        this.oauthClientId = oauthClientId == null ? "" : oauthClientId.trim();
+        this.oauthClientSecret = oauthClientSecret == null ? "" : oauthClientSecret.trim();
+        this.oauthRedirectUri = oauthRedirectUri == null ? "" : oauthRedirectUri.trim();
+        this.adminFrontUrl = adminFrontUrl == null || adminFrontUrl.isBlank()
+                ? "https://rafaekevin.com.br/admin/painel.html"
+                : adminFrontUrl.trim();
         this.restClient = RestClient.builder()
                 .baseUrl("https://api.mercadopago.com")
                 .build();
@@ -54,7 +77,14 @@ public class MercadoPagoService {
         return !accessToken.isBlank();
     }
 
-    /** true se o Access Token for de teste (TEST-...). */
+    public boolean oauthConfigurado() {
+        return !oauthClientId.isBlank() && !oauthClientSecret.isBlank() && !oauthRedirectUri.isBlank();
+    }
+
+    public String getAdminFrontUrl() {
+        return adminFrontUrl;
+    }
+
     public boolean modoTeste() {
         return accessToken.startsWith("TEST-");
     }
@@ -71,15 +101,123 @@ public class MercadoPagoService {
         return backUrlSuccess;
     }
 
-    /**
-     * Cria assinatura pending (plano único mensal) e devolve init_point do Checkout.
-     * Um único passo no cartão — cobrança recorrente R$ valorMensal.
-     */
-    public Map<String, String> criarAssinaturaMensal(
-            Long siteId,
-            String slug,
-            String emailPagador) {
+    public String montarUrlAutorizacaoOAuth(String state) {
+        if (!oauthConfigurado()) {
+            throw new IllegalStateException(
+                    "OAuth do Mercado Pago não configurado. Defina MERCADOPAGO_OAUTH_CLIENT_ID, SECRET e REDIRECT_URI.");
+        }
+        return UriComponentsBuilder
+                .fromHttpUrl("https://auth.mercadopago.com.br/authorization")
+                .queryParam("client_id", oauthClientId)
+                .queryParam("response_type", "code")
+                .queryParam("platform_id", "mp")
+                .queryParam("state", state)
+                .queryParam("redirect_uri", oauthRedirectUri)
+                .build(true)
+                .toUriString();
+    }
 
+    public Map<String, String> trocarCodePorTokens(String code) {
+        if (!oauthConfigurado()) {
+            throw new IllegalStateException("OAuth do Mercado Pago não configurado.");
+        }
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("client_id", oauthClientId);
+        form.add("client_secret", oauthClientSecret);
+        form.add("grant_type", "authorization_code");
+        form.add("code", code);
+        form.add("redirect_uri", oauthRedirectUri);
+
+        try {
+            String resposta = restClient.post()
+                    .uri("/oauth/token")
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(form)
+                    .retrieve()
+                    .body(String.class);
+            JsonNode json = objectMapper.readTree(resposta);
+            Map<String, String> out = new HashMap<>();
+            out.put("access_token", json.path("access_token").asText(""));
+            out.put("refresh_token", json.path("refresh_token").asText(""));
+            String userId = json.path("user_id").asText("");
+            if (userId.isBlank()) {
+                userId = String.valueOf(json.path("user_id").asLong(0));
+                if ("0".equals(userId)) userId = "";
+            }
+            out.put("user_id", userId);
+            if (out.get("access_token").isBlank()) {
+                throw new IllegalStateException("Resposta OAuth sem access_token: " + resposta);
+            }
+            return out;
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            throw new IllegalStateException("Falha OAuth MP: " + e.getResponseBodyAsString(), e);
+        } catch (Exception e) {
+            throw new IllegalStateException("Não foi possível concluir o OAuth do Mercado Pago.", e);
+        }
+    }
+
+    /** Checkout Pro na conta da noiva (Access Token dela). */
+    public Map<String, String> criarPreferenciaPresente(
+            String sellerAccessToken,
+            Long pedidoId,
+            String titulo,
+            BigDecimal total,
+            String backUrlSuccessPresente,
+            String backUrlPendingOrFailure) {
+
+        if (sellerAccessToken == null || sellerAccessToken.isBlank()) {
+            throw new IllegalStateException("Conta Mercado Pago da noiva não conectada.");
+        }
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        Map<String, Object> item = new HashMap<>();
+        item.put("title", titulo == null || titulo.isBlank() ? "Presente de casamento" : titulo);
+        item.put("quantity", 1);
+        item.put("currency_id", "BRL");
+        item.put("unit_price", total.doubleValue());
+        items.add(item);
+
+        Map<String, Object> backUrls = new HashMap<>();
+        backUrls.put("success", backUrlSuccessPresente);
+        backUrls.put("pending", backUrlPendingOrFailure);
+        backUrls.put("failure", backUrlPendingOrFailure);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("items", items);
+        body.put("external_reference", "pedido:" + pedidoId);
+        body.put("back_urls", backUrls);
+        body.put("auto_return", "approved");
+        if (notificationUrl != null && !notificationUrl.isBlank()) {
+            body.put("notification_url", notificationUrl);
+        }
+        body.put("statement_descriptor", "PRESENTE");
+
+        String resposta = postMpComToken("/checkout/preferences", body, sellerAccessToken);
+        try {
+            JsonNode json = objectMapper.readTree(resposta);
+            Map<String, String> out = new HashMap<>();
+            out.put("id", json.path("id").asText());
+            String sandbox = json.path("sandbox_init_point").asText("");
+            String prod = json.path("init_point").asText("");
+            out.put("init_point", !prod.isBlank() ? prod : sandbox);
+            if (out.get("id").isBlank() || out.get("init_point").isBlank()) {
+                throw new IllegalStateException("Preferência inválida: " + resposta);
+            }
+            return out;
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("Não foi possível criar o checkout de presente.", e);
+        }
+    }
+
+    public JsonNode buscarPagamentoComToken(String paymentId, String token) {
+        return getJsonComToken("/v1/payments/{id}", paymentId, token);
+    }
+
+    public Map<String, String> criarAssinaturaMensal(Long siteId, String slug, String emailPagador) {
         if (!configurado()) {
             throw new IllegalStateException(
                     "Mercado Pago não configurado. Defina MERCADOPAGO_ACCESS_TOKEN no servidor.");
@@ -100,7 +238,6 @@ public class MercadoPagoService {
             body.put("status", "pending");
             return lerCheckout(postMp("/preapproval", body));
         } catch (IllegalStateException primeiro) {
-            // Fallback: assinatura sem plano associado
             Map<String, Object> autoRecurring = new HashMap<>();
             autoRecurring.put("frequency", 1);
             autoRecurring.put("frequency_type", "months");
@@ -172,34 +309,43 @@ public class MercadoPagoService {
     }
 
     private String postMp(String path, Object body) {
+        return postMpComToken(path, body, accessToken);
+    }
+
+    private String postMpComToken(String path, Object body, String token) {
         try {
             return restClient.post()
                     .uri(path)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Authorization", "Bearer " + token)
                     .body(body)
                     .retrieve()
                     .body(String.class);
         } catch (org.springframework.web.client.RestClientResponseException e) {
             String detalhe = e.getResponseBodyAsString();
-            if (detalhe == null || detalhe.isBlank()) {
-                detalhe = e.getMessage();
-            }
+            if (detalhe == null || detalhe.isBlank()) detalhe = e.getMessage();
             throw new IllegalStateException("Mercado Pago recusou (" + path + "): " + detalhe, e);
         }
     }
 
     private JsonNode getJson(String uri, String id) {
-        if (!configurado()) {
+        return getJsonComToken(uri, id, accessToken);
+    }
+
+    private JsonNode getJsonComToken(String uri, String id, String token) {
+        if (token == null || token.isBlank()) {
             throw new IllegalStateException("Mercado Pago não configurado.");
         }
-        String resposta = restClient.get()
-                .uri(uri, id)
-                .header("Authorization", "Bearer " + accessToken)
-                .retrieve()
-                .body(String.class);
         try {
+            String resposta = restClient.get()
+                    .uri(uri, id)
+                    .header("Authorization", "Bearer " + token)
+                    .retrieve()
+                    .body(String.class);
             return objectMapper.readTree(resposta);
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            throw new IllegalStateException(
+                    "Falha ao buscar recurso MP " + id + ": " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
             throw new IllegalStateException("Não foi possível ler recurso MP " + id, e);
         }
@@ -210,19 +356,14 @@ public class MercadoPagoService {
             JsonNode json = objectMapper.readTree(resposta);
             Map<String, String> out = new HashMap<>();
             out.put("id", json.path("id").asText());
-
-            // Assinaturas: NÃO reescrever para sandbox.* — isso gera 404.
-            // Com token TEST-, o MP trata a cobrança como teste mesmo no init_point oficial.
             String sandbox = json.path("sandbox_init_point").asText("");
             String prod = json.path("init_point").asText("");
-            String init = !prod.isBlank() ? prod : sandbox;
-
-            out.put("init_point", init);
+            out.put("init_point", !prod.isBlank() ? prod : sandbox);
             out.put("status", json.path("status").asText("pending"));
-            if (out.get("id") == null || out.get("id").isBlank()) {
+            if (out.get("id").isBlank()) {
                 throw new IllegalStateException("Resposta do Mercado Pago sem id da assinatura.");
             }
-            if (out.get("init_point") == null || out.get("init_point").isBlank()) {
+            if (out.get("init_point").isBlank()) {
                 throw new IllegalStateException("Resposta do Mercado Pago sem link de checkout.");
             }
             return out;
@@ -231,5 +372,9 @@ public class MercadoPagoService {
         } catch (Exception e) {
             throw new IllegalStateException("Resposta inválida do Mercado Pago ao criar assinatura.", e);
         }
+    }
+
+    public static String encodeQuery(String value) {
+        return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 }
