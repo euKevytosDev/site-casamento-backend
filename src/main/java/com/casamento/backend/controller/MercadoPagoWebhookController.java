@@ -1,6 +1,7 @@
 package com.casamento.backend.controller;
 
 import com.casamento.backend.service.AssinaturaService;
+import com.casamento.backend.service.MercadoPagoWebhookSignatureService;
 import com.casamento.backend.service.PresenteService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,19 +17,24 @@ public class MercadoPagoWebhookController {
 
     private final AssinaturaService assinaturaService;
     private final PresenteService presenteService;
+    private final MercadoPagoWebhookSignatureService signatureService;
     private final ObjectMapper objectMapper;
 
     public MercadoPagoWebhookController(
             AssinaturaService assinaturaService,
             PresenteService presenteService,
+            MercadoPagoWebhookSignatureService signatureService,
             ObjectMapper objectMapper) {
         this.assinaturaService = assinaturaService;
         this.presenteService = presenteService;
+        this.signatureService = signatureService;
         this.objectMapper = objectMapper;
     }
 
     @PostMapping("/mercadopago")
     public ResponseEntity<String> receber(
+            @RequestHeader(value = "x-signature", required = false) String xSignature,
+            @RequestHeader(value = "x-request-id", required = false) String xRequestId,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String topic,
             @RequestParam(required = false) String id,
@@ -58,45 +64,37 @@ public class MercadoPagoWebhookController {
                 return ResponseEntity.ok("ok");
             }
 
-            String t = tipo == null ? "" : tipo.toLowerCase();
-
-            if (t.isBlank() || "payment".equals(t)) {
-                presenteService.processarPagamentoPresente(recursoId, userHint);
-                assinaturaService.processarPagamentoAprovado(recursoId);
-            } else if ("subscription_preapproval".equals(t)
-                    || "subscription".equals(t)
-                    || "preapproval".equals(t)) {
-                assinaturaService.processarPreapproval(recursoId);
-            } else if ("subscription_authorized_payment".equals(t)
-                    || "subscription_authorized".equals(t)
-                    || "authorized_payment".equals(t)) {
-                assinaturaService.processarAuthorizedPayment(recursoId);
+            if (!signatureService.validar(xSignature, xRequestId, recursoId)) {
+                return ResponseEntity.status(401).body("assinatura inválida");
             }
+
+            processar(tipo, recursoId, userHint);
         } catch (Exception ignored) {
         }
 
         return ResponseEntity.ok("ok");
     }
 
+    /** Ping do MP / healthcheck — não processa pagamento (evita abuso via GET). */
     @GetMapping("/mercadopago")
     public ResponseEntity<String> ping(@RequestParam Map<String, String> params) {
-        String topic = params.getOrDefault("topic", params.getOrDefault("type", ""));
-        String id = params.getOrDefault("data.id", params.get("id"));
-        String userHint = params.getOrDefault("user_id", params.get("userId"));
-        if (id != null && !id.isBlank()) {
-            try {
-                String t = topic == null ? "" : topic.toLowerCase();
-                if (t.isBlank() || "payment".equals(t)) {
-                    presenteService.processarPagamentoPresente(id, userHint);
-                    assinaturaService.processarPagamentoAprovado(id);
-                } else if (t.contains("preapproval") || "subscription".equals(t)) {
-                    assinaturaService.processarPreapproval(id);
-                } else if (t.contains("authorized")) {
-                    assinaturaService.processarAuthorizedPayment(id);
-                }
-            } catch (Exception ignored) {
-            }
-        }
         return ResponseEntity.ok("ok");
+    }
+
+    private void processar(String tipo, String recursoId, String userHint) {
+        String t = tipo == null ? "" : tipo.toLowerCase();
+
+        if (t.isBlank() || "payment".equals(t)) {
+            presenteService.processarPagamentoPresente(recursoId, userHint);
+            assinaturaService.processarPagamentoAprovado(recursoId);
+        } else if ("subscription_preapproval".equals(t)
+                || "subscription".equals(t)
+                || "preapproval".equals(t)) {
+            assinaturaService.processarPreapproval(recursoId);
+        } else if ("subscription_authorized_payment".equals(t)
+                || "subscription_authorized".equals(t)
+                || "authorized_payment".equals(t)) {
+            assinaturaService.processarAuthorizedPayment(recursoId);
+        }
     }
 }

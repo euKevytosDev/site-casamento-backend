@@ -26,8 +26,8 @@ public class PedidoPresente {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
-    /** PENDENTE | PAGO | CANCELADO */
-    @Column(nullable = false, length = 20)
+    /** PENDENTE | AGUARDANDO_PIX | PAGO | CANCELADO */
+    @Column(nullable = false, length = 30)
     private String status = "PENDENTE";
 
     @Column(name = "mp_preference_id", length = 120)

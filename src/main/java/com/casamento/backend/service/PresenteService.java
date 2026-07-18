@@ -73,21 +73,73 @@ public class PresenteService {
         );
     }
 
+    /**
+     * Convidado avisou que pagou PIX. Não baixa cotas — cria pedido AGUARDANDO_PIX
+     * para a noiva confirmar no painel (após ver o crédito na conta).
+     */
     @Transactional
     public FinalizarCarrinhoResponse finalizarCarrinho(CompraCarrinhoRequest request) {
-        exigirSiteAtual();
+        Site site = exigirSiteAtual();
 
         if (request.getNomeComprador() == null || request.getNomeComprador().isBlank()) {
             throw new IllegalArgumentException("Informe o nome do comprador.");
         }
 
         Map<Long, Integer> quantidadePorPresente = agruparItens(request.getItens());
-        BigDecimal total = reservarCotas(quantidadePorPresente, request.getNomeComprador().trim());
+        BigDecimal total = calcularTotal(quantidadePorPresente);
+
+        PedidoPresente pedido = new PedidoPresente();
+        pedido.setSite(site);
+        pedido.setNomeComprador(request.getNomeComprador().trim());
+        pedido.setTotal(total);
+        pedido.setStatus("AGUARDANDO_PIX");
+        try {
+            pedido.setItensJson(objectMapper.writeValueAsString(request.getItens()));
+        } catch (Exception e) {
+            throw new IllegalStateException("Não foi possível registrar o aviso de pagamento.");
+        }
+        pedidoPresenteRepository.save(pedido);
 
         return new FinalizarCarrinhoResponse(
                 total,
-                "Obrigado pelo carinho! Suas cotas foram confirmadas com sucesso."
+                "Obrigado! Recebemos seu aviso. O casal confirma o presente após o PIX aparecer na conta — as cotas só baixam nessa confirmação."
         );
+    }
+
+    @Transactional
+    public FinalizarCarrinhoResponse confirmarPixManual(Long pedidoId) {
+        Site site = exigirSiteAtual();
+        PedidoPresente pedido = pedidoPresenteRepository.findById(pedidoId)
+                .orElseThrow(() -> new IllegalArgumentException("Pedido não encontrado."));
+        if (pedido.getSite() == null || !site.getId().equals(pedido.getSite().getId())) {
+            throw new IllegalArgumentException("Pedido não pertence a este casamento.");
+        }
+        if ("PAGO".equalsIgnoreCase(pedido.getStatus())) {
+            return new FinalizarCarrinhoResponse(pedido.getTotal(), "Presente já estava confirmado.");
+        }
+        if (!"AGUARDANDO_PIX".equalsIgnoreCase(pedido.getStatus())) {
+            throw new IllegalStateException("Este pedido não está aguardando confirmação de PIX.");
+        }
+        confirmarPedidoPago(pedido, "pix-manual:" + pedido.getId());
+        return new FinalizarCarrinhoResponse(
+                pedido.getTotal(),
+                "PIX confirmado! Cotas reservadas com sucesso."
+        );
+    }
+
+    @Transactional
+    public void recusarPixManual(Long pedidoId) {
+        Site site = exigirSiteAtual();
+        PedidoPresente pedido = pedidoPresenteRepository.findById(pedidoId)
+                .orElseThrow(() -> new IllegalArgumentException("Pedido não encontrado."));
+        if (pedido.getSite() == null || !site.getId().equals(pedido.getSite().getId())) {
+            throw new IllegalArgumentException("Pedido não pertence a este casamento.");
+        }
+        if (!"AGUARDANDO_PIX".equalsIgnoreCase(pedido.getStatus())) {
+            throw new IllegalStateException("Só é possível recusar avisos de PIX pendentes.");
+        }
+        pedido.setStatus("CANCELADO");
+        pedidoPresenteRepository.save(pedido);
     }
 
     @Transactional
