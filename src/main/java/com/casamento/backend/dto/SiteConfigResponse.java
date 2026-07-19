@@ -22,6 +22,8 @@ public class SiteConfigResponse {
     private String mapsUrl;
     private String versiculo;
     private String fraseBencao;
+    private String tituloGaleria;
+    private String historiaCurta;
     private String fotoHeroUrl;
     private String fotoSecundariaUrl;
     private String fotoLocalUrl;
@@ -75,6 +77,12 @@ public class SiteConfigResponse {
 
     public String getFraseBencao() { return fraseBencao; }
     public void setFraseBencao(String fraseBencao) { this.fraseBencao = fraseBencao; }
+
+    public String getTituloGaleria() { return tituloGaleria; }
+    public void setTituloGaleria(String tituloGaleria) { this.tituloGaleria = tituloGaleria; }
+
+    public String getHistoriaCurta() { return historiaCurta; }
+    public void setHistoriaCurta(String historiaCurta) { this.historiaCurta = historiaCurta; }
 
     public String getFotoHeroUrl() { return fotoHeroUrl; }
     public void setFotoHeroUrl(String fotoHeroUrl) { this.fotoHeroUrl = fotoHeroUrl; }

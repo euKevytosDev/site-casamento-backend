@@ -36,6 +36,8 @@ public class SiteConfigService {
         r.setMapsUrl(site.getMapsUrl());
         r.setVersiculo(site.getVersiculo());
         r.setFraseBencao(site.getFraseBencao());
+        r.setTituloGaleria(site.getTituloGaleria());
+        r.setHistoriaCurta(site.getHistoriaCurta());
         r.setFotoHeroUrl(site.getFotoHeroUrl());
         r.setFotoSecundariaUrl(site.getFotoSecundariaUrl());
         r.setFotoLocalUrl(site.getFotoLocalUrl());

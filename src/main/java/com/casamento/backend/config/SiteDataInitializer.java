@@ -49,6 +49,8 @@ public class SiteDataInitializer implements CommandLineRunner {
         site.setMesExtenso("ABRIL");
         site.setVersiculo(VERSICULO_PADRAO);
         site.setFraseBencao("Com a bênção de Deus e nossos pais");
+        site.setTituloGaleria("Nossos momentos");
+        site.setHistoriaCurta("Um encontro, um sim e o começo da nossa história juntos.");
         site.setAtivo(true);
         site.setAssinaturaStatus("ATIVA");
         siteRepository.save(site);
@@ -70,6 +72,8 @@ public class SiteDataInitializer implements CommandLineRunner {
         site.setNomeCurto("Seu casamento");
         site.setVersiculo(VERSICULO_PADRAO);
         site.setFraseBencao("Com a bênção de Deus e nossos pais");
+        site.setTituloGaleria("Nossos momentos");
+        site.setHistoriaCurta("Conte em poucas linhas como vocês se encontraram.");
         site.setPaisNoiva("Pais da noiva");
         site.setPaisNoivo("Pais do noivo");
         site.setLocalNome("Local da celebração");

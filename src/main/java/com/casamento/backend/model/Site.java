@@ -60,6 +60,14 @@ public class Site {
     @Column(name = "frase_bencao", length = 300)
     private String fraseBencao;
 
+    /** Título acima do carrossel (ex.: Nossos momentos) */
+    @Column(name = "titulo_galeria", length = 80)
+    private String tituloGaleria;
+
+    /** História curta do casal (2–4 linhas; convidado não lê texto longo) */
+    @Column(name = "historia_curta", length = 500)
+    private String historiaCurta;
+
     @Column(name = "foto_hero_url", length = 500)
     private String fotoHeroUrl;
 
@@ -198,6 +206,12 @@ public class Site {
 
     public String getFraseBencao() { return fraseBencao; }
     public void setFraseBencao(String fraseBencao) { this.fraseBencao = fraseBencao; }
+
+    public String getTituloGaleria() { return tituloGaleria; }
+    public void setTituloGaleria(String tituloGaleria) { this.tituloGaleria = tituloGaleria; }
+
+    public String getHistoriaCurta() { return historiaCurta; }
+    public void setHistoriaCurta(String historiaCurta) { this.historiaCurta = historiaCurta; }
 
     public String getFotoHeroUrl() { return fotoHeroUrl; }
     public void setFotoHeroUrl(String fotoHeroUrl) { this.fotoHeroUrl = fotoHeroUrl; }

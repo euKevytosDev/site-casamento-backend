@@ -103,6 +103,20 @@ public class AdminSitePersonalizacaoController {
         if (body.containsKey("fraseBencao")) {
             site.setFraseBencao(blankToNull(asString(body.get("fraseBencao"))));
         }
+        if (body.containsKey("tituloGaleria")) {
+            String titulo = asString(body.get("tituloGaleria"));
+            if (titulo.length() > 80) {
+                return ResponseEntity.badRequest().body("Título da galeria: no máximo 80 caracteres.");
+            }
+            site.setTituloGaleria(blankToNull(titulo));
+        }
+        if (body.containsKey("historiaCurta")) {
+            String hist = asString(body.get("historiaCurta"));
+            if (hist.length() > 500) {
+                return ResponseEntity.badRequest().body("História curta: no máximo 500 caracteres.");
+            }
+            site.setHistoriaCurta(blankToNull(hist));
+        }
         if (body.containsKey("pixChave")) {
             site.setPixChave(blankToNull(asString(body.get("pixChave"))));
         }
