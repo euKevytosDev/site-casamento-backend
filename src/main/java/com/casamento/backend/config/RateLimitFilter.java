@@ -77,6 +77,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (path.equals("/api/presenca/confirmar-familia")) {
             return 20;
         }
+        if (path.equals("/api/recados") && "POST".equalsIgnoreCase(method)) {
+            return 8;
+        }
         if (path.equals("/api/presentes/finalizar-carrinho")
                 || path.equals("/api/presentes/gerar-pix")
                 || path.equals("/api/presentes/checkout-cartao")) {

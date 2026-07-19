@@ -53,6 +53,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/presentes/*/comprar").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/admin/mercadopago/oauth/callback").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/presenca/confirmar-familia").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/recados").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/recados").permitAll()
                         .requestMatchers("/api/admin/sites/**").hasRole("ADMIN")
                         .requestMatchers("/api/admin/**").authenticated()
                         .anyRequest().permitAll()
