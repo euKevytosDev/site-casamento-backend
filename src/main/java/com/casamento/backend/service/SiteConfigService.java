@@ -48,6 +48,7 @@ public class SiteConfigService {
         r.setPixNomeRecebedor(site.getPixNomeRecebedor());
         r.setPixCidade(site.getPixCidade());
         r.setMusicaUrl(site.getMusicaUrl());
+        r.setFonteNomes(site.getFonteNomes());
         r.setMpCartaoDisponivel(site.isMpSellerConectado());
         return r;
     }

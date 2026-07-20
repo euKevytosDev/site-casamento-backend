@@ -135,6 +135,10 @@ public class Site {
     @Column(name = "musica_url", length = 500)
     private String musicaUrl;
 
+    /** Slug da fonte cursiva dos nomes (ex.: great-vibes, pinyon-script). */
+    @Column(name = "fonte_nomes", length = 40)
+    private String fonteNomes;
+
     /** PENDENTE | ATIVA | ATRASADA | CANCELADA */
     @Column(name = "assinatura_status", length = 30)
     private String assinaturaStatus = "ATIVA";
@@ -281,6 +285,9 @@ public class Site {
 
     public String getMusicaUrl() { return musicaUrl; }
     public void setMusicaUrl(String musicaUrl) { this.musicaUrl = musicaUrl; }
+
+    public String getFonteNomes() { return fonteNomes; }
+    public void setFonteNomes(String fonteNomes) { this.fonteNomes = fonteNomes; }
 
     public String getAssinaturaStatus() { return assinaturaStatus; }
     public void setAssinaturaStatus(String assinaturaStatus) { this.assinaturaStatus = assinaturaStatus; }

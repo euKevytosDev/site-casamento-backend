@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Personalização do site ATUAL (via X-Site-Id).
@@ -24,6 +25,20 @@ import java.util.Map;
 @RequestMapping("/api/admin/site")
 @CrossOrigin(origins = "*")
 public class AdminSitePersonalizacaoController {
+
+    private static final Set<String> FONTES_NOMES_VALIDAS = Set.of(
+            "great-vibes",
+            "allura",
+            "pinyon-script",
+            "alex-brush",
+            "tangerine",
+            "sacramento",
+            "parisienne",
+            "meie-script",
+            "monsieur-la-doulaise",
+            "bona-nova",
+            "playfair-italic"
+    );
 
     private final SiteRepository siteRepository;
     private final SiteConfigService siteConfigService;
@@ -128,6 +143,16 @@ public class AdminSitePersonalizacaoController {
         }
         if (body.containsKey("musicaUrl")) {
             site.setMusicaUrl(blankToNull(asString(body.get("musicaUrl"))));
+        }
+        if (body.containsKey("fonteNomes")) {
+            String fonte = asString(body.get("fonteNomes"));
+            if (fonte.isBlank()) {
+                site.setFonteNomes(null);
+            } else if (!FONTES_NOMES_VALIDAS.contains(fonte)) {
+                return ResponseEntity.badRequest().body("fonteNomes inválida.");
+            } else {
+                site.setFonteNomes(fonte);
+            }
         }
 
         @SuppressWarnings("unchecked")
