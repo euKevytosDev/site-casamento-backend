@@ -148,10 +148,6 @@ public class Site {
     @Column(name = "mp_preapproval_id", length = 120)
     private String mpPreapprovalId;
 
-    /** E-mail informado como pagador no checkout da assinatura (para casar webhook do plano). */
-    @Column(name = "mp_email_pagador", length = 180)
-    private String mpEmailPagador;
-
     /** Link do Checkout Pro da assinatura mensal (autorizar cartão). */
     @Column(name = "mp_assinatura_init_point", length = 500)
     private String mpAssinaturaInitPoint;
@@ -297,9 +293,6 @@ public class Site {
 
     public String getMpPreapprovalId() { return mpPreapprovalId; }
     public void setMpPreapprovalId(String mpPreapprovalId) { this.mpPreapprovalId = mpPreapprovalId; }
-
-    public String getMpEmailPagador() { return mpEmailPagador; }
-    public void setMpEmailPagador(String mpEmailPagador) { this.mpEmailPagador = mpEmailPagador; }
 
     public String getMpAssinaturaInitPoint() { return mpAssinaturaInitPoint; }
     public void setMpAssinaturaInitPoint(String mpAssinaturaInitPoint) { this.mpAssinaturaInitPoint = mpAssinaturaInitPoint; }

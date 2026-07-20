@@ -27,8 +27,8 @@ public interface SiteRepository extends JpaRepository<Site, Long> {
 
     Optional<Site> findByMpSellerUserId(String mpSellerUserId);
 
-    Optional<Site> findFirstByMpEmailPagadorIgnoreCaseAndAssinaturaStatusOrderByIdDesc(
-            String mpEmailPagador, String assinaturaStatus);
+    Optional<Site> findFirstByMpPaymentIdIgnoreCaseAndAssinaturaStatusOrderByIdDesc(
+            String mpPaymentId, String assinaturaStatus);
 
     Optional<Site> findFirstByMpPreferenceIdAndAssinaturaStatusOrderByIdDesc(
             String mpPreferenceId, String assinaturaStatus);

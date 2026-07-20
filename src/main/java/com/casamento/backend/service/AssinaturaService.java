@@ -151,7 +151,8 @@ public class AssinaturaService {
         if (id != null && !id.startsWith("plan:")) {
             site.setMpPreapprovalId(id);
         }
-        site.setMpEmailPagador(emailMp);
+        // Reusa mp_payment_id só enquanto PENDENTE, sem criar coluna nova no banco
+        site.setMpPaymentId("email:" + emailMp);
         site.setMpAssinaturaInitPoint(assinatura.get("init_point"));
         site.setMpAssinaturaStatus(assinatura.getOrDefault("status", "pending"));
         site.setAssinaturaStatus("PENDENTE");
@@ -231,7 +232,8 @@ public class AssinaturaService {
         }
         if (site == null && !payerEmail.isBlank()) {
             site = siteRepository
-                    .findFirstByMpEmailPagadorIgnoreCaseAndAssinaturaStatusOrderByIdDesc(payerEmail, "PENDENTE")
+                    .findFirstByMpPaymentIdIgnoreCaseAndAssinaturaStatusOrderByIdDesc(
+                            "email:" + payerEmail.trim().toLowerCase(), "PENDENTE")
                     .orElse(null);
         }
         if (site == null && !planId.isBlank()) {
@@ -261,6 +263,9 @@ public class AssinaturaService {
         if ("authorized".equalsIgnoreCase(status)) {
             site.setAtivo(true);
             site.setAssinaturaStatus("ATIVA");
+            if (site.getMpPaymentId() != null && site.getMpPaymentId().startsWith("email:")) {
+                site.setMpPaymentId(null);
+            }
             if (site.getAssinaturaInicio() == null) {
                 site.setAssinaturaInicio(Instant.now());
             }
