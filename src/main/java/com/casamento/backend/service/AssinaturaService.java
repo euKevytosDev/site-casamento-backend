@@ -142,7 +142,16 @@ public class AssinaturaService {
         Map<String, String> assinatura = mercadoPagoService.criarAssinaturaMensal(
                 site.getId(), site.getSlug(), emailMp);
 
-        site.setMpPreapprovalId(assinatura.get("id"));
+        String id = assinatura.get("id");
+        String planId = assinatura.get("plan_id");
+        if (planId != null && !planId.isBlank()) {
+            site.setMpPreferenceId(planId);
+        }
+        // id "plan:xxx" = ainda não existe preapproval; webhook vai preencher
+        if (id != null && !id.startsWith("plan:")) {
+            site.setMpPreapprovalId(id);
+        }
+        site.setMpEmailPagador(emailMp);
         site.setMpAssinaturaInitPoint(assinatura.get("init_point"));
         site.setMpAssinaturaStatus(assinatura.getOrDefault("status", "pending"));
         site.setAssinaturaStatus("PENDENTE");
@@ -210,10 +219,30 @@ public class AssinaturaService {
         JsonNode pre = mercadoPagoService.buscarPreapproval(preapprovalId);
         String status = pre.path("status").asText("");
         String external = pre.path("external_reference").asText("");
+        String planId = pre.path("preapproval_plan_id").asText("");
+        String payerEmail = pre.path("payer_email").asText("");
+        if (payerEmail.isBlank()) {
+            payerEmail = pre.path("payer").path("email").asText("");
+        }
 
         Site site = resolverSitePorExternal(external);
         if (site == null) {
             site = siteRepository.findByMpPreapprovalId(preapprovalId).orElse(null);
+        }
+        if (site == null && !payerEmail.isBlank()) {
+            site = siteRepository
+                    .findFirstByMpEmailPagadorIgnoreCaseAndAssinaturaStatusOrderByIdDesc(payerEmail, "PENDENTE")
+                    .orElse(null);
+        }
+        if (site == null && !planId.isBlank()) {
+            site = siteRepository
+                    .findFirstByMpPreferenceIdAndAssinaturaStatusOrderByIdDesc(planId, "PENDENTE")
+                    .orElse(null);
+        }
+        if (site == null && !payerEmail.isBlank()) {
+            site = usuarioNoivaRepository.findByEmailIgnoreCase(payerEmail)
+                    .map(UsuarioNoiva::getSite)
+                    .orElse(null);
         }
         if (site == null || slugReservado(site.getSlug())) {
             return;
@@ -221,6 +250,9 @@ public class AssinaturaService {
 
         site.setMpPreapprovalId(preapprovalId);
         site.setMpAssinaturaStatus(status);
+        if (!planId.isBlank()) {
+            site.setMpPreferenceId(planId);
+        }
         String init = pre.path("init_point").asText("");
         if (!init.isBlank()) {
             site.setMpAssinaturaInitPoint(init);

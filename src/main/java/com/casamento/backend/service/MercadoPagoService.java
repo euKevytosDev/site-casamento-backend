@@ -227,45 +227,77 @@ public class MercadoPagoService {
                 ? backUrlSuccess
                 : "https://eukevytosdev.github.io/site-casamento-landing/sucesso.html";
 
-        // Fluxo certo para landing: assinatura PENDING sem plano → retorna init_point
-        // (checkout do MP). Plano associado exige card_token_id e não serve para redirect.
-        Map<String, Object> autoRecurring = new HashMap<>();
-        autoRecurring.put("frequency", 1);
-        autoRecurring.put("frequency_type", "months");
-        autoRecurring.put("transaction_amount", valorMensal.doubleValue());
-        autoRecurring.put("currency_id", "BRL");
-        // MP recomenda end_date; ~24 meses cobre o uso típico do site de casamento
-        autoRecurring.put("end_date", Instant.now().plus(730, ChronoUnit.DAYS).toString());
-
-        Map<String, Object> body = new HashMap<>();
-        body.put("reason", "Site de Casamento (" + slug + ")");
-        body.put("external_reference", "site:" + siteId);
-        body.put("payer_email", emailPagador);
-        body.put("auto_recurring", autoRecurring);
-        body.put("back_url", back);
-        body.put("status", "pending");
-
-        // Se houver plano configurado manualmente, tenta como 2ª opção (pode exigir card_token)
+        // 1) Preferência: preapproval pending com external_reference (melhor para webhook)
         try {
+            Map<String, Object> autoRecurring = new HashMap<>();
+            autoRecurring.put("frequency", 1);
+            autoRecurring.put("frequency_type", "months");
+            autoRecurring.put("transaction_amount", valorMensal.doubleValue());
+            autoRecurring.put("currency_id", "BRL");
+            autoRecurring.put("end_date", Instant.now().plus(730, ChronoUnit.DAYS).toString());
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("reason", "Site de Casamento (" + slug + ")");
+            body.put("external_reference", "site:" + siteId);
+            body.put("payer_email", emailPagador);
+            body.put("auto_recurring", autoRecurring);
+            body.put("back_url", back);
+            body.put("status", "pending");
             return lerCheckout(postMp("/preapproval", body));
-        } catch (IllegalStateException semPlano) {
-            if (preapprovalPlanIdConfigurado.isBlank() && (preapprovalPlanIdCache == null || preapprovalPlanIdCache.isBlank())) {
-                throw semPlano;
-            }
+        } catch (IllegalStateException preapprovalFalhou) {
+            // 2) Fallback estável (TEST- costuma dar 500 no /preapproval):
+            //    cria/reusa plano e redireciona para o init_point do plano.
             try {
-                String planId = garantirPlanoMensal(back);
-                Map<String, Object> comPlano = new HashMap<>();
-                comPlano.put("preapproval_plan_id", planId);
-                comPlano.put("reason", "Site de Casamento (" + slug + ")");
-                comPlano.put("external_reference", "site:" + siteId);
-                comPlano.put("payer_email", emailPagador);
-                comPlano.put("back_url", back);
-                comPlano.put("status", "pending");
-                return lerCheckout(postMp("/preapproval", comPlano));
-            } catch (IllegalStateException comPlanoErro) {
+                return checkoutViaPlano(siteId, slug, back);
+            } catch (IllegalStateException planoFalhou) {
                 throw new IllegalStateException(
-                        semPlano.getMessage() + " | com plano: " + comPlanoErro.getMessage(), comPlanoErro);
+                        preapprovalFalhou.getMessage() + " | plano: " + planoFalhou.getMessage(),
+                        planoFalhou);
             }
+        }
+    }
+
+    /**
+     * Checkout pela URL do plano (sem criar /preapproval).
+     * O MP cria a assinatura quando o comprador conclui o pagamento.
+     */
+    private Map<String, String> checkoutViaPlano(Long siteId, String slug, String backUrl) {
+        Map<String, String> plano = garantirPlanoMensalDetalhes(backUrl);
+        String init = plano.get("init_point");
+        if (init == null || init.isBlank()) {
+            throw new IllegalStateException("Plano do Mercado Pago sem link de checkout.");
+        }
+        // Ajuda a identificar no painel do MP; o vínculo real do site é por e-mail/plano no webhook
+        if (!init.contains("external_reference")) {
+            String sep = init.contains("?") ? "&" : "?";
+            init = init + sep + "external_reference=" + encodeQuery("site:" + siteId)
+                    + "&reason=" + encodeQuery("Site de Casamento (" + slug + ")");
+        }
+        Map<String, String> out = new HashMap<>();
+        out.put("id", "plan:" + plano.get("id"));
+        out.put("plan_id", plano.get("id"));
+        out.put("init_point", init);
+        out.put("status", "pending");
+        return out;
+    }
+
+    private Map<String, String> garantirPlanoMensalDetalhes(String backUrl) {
+        String planId = garantirPlanoMensal(backUrl);
+        try {
+            JsonNode json = getJson("/preapproval_plan/{id}", planId);
+            Map<String, String> out = new HashMap<>();
+            out.put("id", planId);
+            String sandbox = json.path("sandbox_init_point").asText("");
+            String prod = json.path("init_point").asText("");
+            out.put("init_point", escolherInitPoint(sandbox, prod, accessToken));
+            if (out.get("init_point").isBlank()) {
+                throw new IllegalStateException("Plano sem init_point: " + planId);
+            }
+            return out;
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("Não foi possível ler o plano " + planId, e);
         }
     }
 
@@ -386,6 +418,10 @@ public class MercadoPagoService {
     private static String escolherInitPoint(JsonNode json, String token) {
         String sandbox = json.path("sandbox_init_point").asText("");
         String prod = json.path("init_point").asText("");
+        return escolherInitPoint(sandbox, prod, token);
+    }
+
+    private static String escolherInitPoint(String sandbox, String prod, String token) {
         boolean teste = token != null && token.startsWith("TEST-");
         if (teste) {
             return !sandbox.isBlank() ? sandbox : prod;
