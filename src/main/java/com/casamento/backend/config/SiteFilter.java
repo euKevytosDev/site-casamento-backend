@@ -32,6 +32,11 @@ public class SiteFilter extends OncePerRequestFilter {
     private SiteRepository siteRepository;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return "/api/health".equals(request.getRequestURI());
+    }
+
+    @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,

@@ -131,6 +131,20 @@ Veja também: `render.env.example`
 3. Configure todas as variáveis de ambiente
 4. O `PORT` é injetado automaticamente pela Render
 
+## UptimeRobot (acordar só o Render)
+
+Configure o monitor para bater **somente** no health check — **sem** header `X-Site-Id`:
+
+```
+GET https://site-casamento-backend-nrfb.onrender.com/api/health
+```
+
+Resposta esperada: `{"status":"ok","db":"skipped"}`
+
+- **Intervalo sugerido:** 14 min (mantém Render quente no free tier)
+- **Não use** `/api/presenca`, `/api/site/config` etc. no monitor — esses endpoints consultam o Neon e consomem compute
+- No **cold start** completo do Render, o boot da API ainda abre o banco uma vez; entre pings só com `/api/health`, o Neon pode suspender
+
 ## Banco de dados
 
 - Provider: [Neon](https://neon.tech) (PostgreSQL serverless)
