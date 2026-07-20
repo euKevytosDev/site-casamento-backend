@@ -424,26 +424,11 @@ public class MercadoPagoService {
     private static String escolherInitPoint(String sandbox, String prod, String token) {
         boolean teste = token != null && token.startsWith("TEST-");
         if (teste) {
-            if (!sandbox.isBlank()) {
-                return sandbox;
-            }
-            // Assinaturas (preapproval_plan) não devolvem sandbox_init_point —
-            // força o host sandbox para cartões/usuários de teste funcionarem.
-            if (!prod.isBlank()) {
-                return forcarSandbox(prod);
-            }
-            return "";
+            // Preferência/Checkout Pro tem sandbox_init_point; Assinaturas NÃO.
+            // Não reescrever o host — sandbox.mercadopago.../subscriptions dá 404.
+            return !sandbox.isBlank() ? sandbox : prod;
         }
         return !prod.isBlank() ? prod : sandbox;
-    }
-
-    private static String forcarSandbox(String url) {
-        if (url == null || url.isBlank()) return url;
-        return url
-                .replace("https://www.mercadopago.com.br", "https://sandbox.mercadopago.com.br")
-                .replace("http://www.mercadopago.com.br", "https://sandbox.mercadopago.com.br")
-                .replace("https://www.mercadopago.com/", "https://sandbox.mercadopago.com/")
-                .replace("https://mercadopago.com.br", "https://sandbox.mercadopago.com.br");
     }
 
     public static String encodeQuery(String value) {
