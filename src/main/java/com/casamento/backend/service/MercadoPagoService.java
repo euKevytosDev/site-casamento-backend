@@ -13,6 +13,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -225,36 +227,44 @@ public class MercadoPagoService {
                 ? backUrlSuccess
                 : "https://eukevytosdev.github.io/site-casamento-landing/sucesso.html";
 
+        // Fluxo certo para landing: assinatura PENDING sem plano → retorna init_point
+        // (checkout do MP). Plano associado exige card_token_id e não serve para redirect.
+        Map<String, Object> autoRecurring = new HashMap<>();
+        autoRecurring.put("frequency", 1);
+        autoRecurring.put("frequency_type", "months");
+        autoRecurring.put("transaction_amount", valorMensal.doubleValue());
+        autoRecurring.put("currency_id", "BRL");
+        // MP recomenda end_date; ~24 meses cobre o uso típico do site de casamento
+        autoRecurring.put("end_date", Instant.now().plus(730, ChronoUnit.DAYS).toString());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("reason", "Site de Casamento (" + slug + ")");
+        body.put("external_reference", "site:" + siteId);
+        body.put("payer_email", emailPagador);
+        body.put("auto_recurring", autoRecurring);
+        body.put("back_url", back);
+        body.put("status", "pending");
+
+        // Se houver plano configurado manualmente, tenta como 2ª opção (pode exigir card_token)
         try {
-            String planId = garantirPlanoMensal(back);
-            Map<String, Object> body = new HashMap<>();
-            body.put("preapproval_plan_id", planId);
-            body.put("reason", "Site de Casamento (" + slug + ")");
-            body.put("external_reference", "site:" + siteId);
-            body.put("payer_email", emailPagador);
-            body.put("back_url", back);
-            body.put("status", "pending");
             return lerCheckout(postMp("/preapproval", body));
-        } catch (IllegalStateException primeiro) {
-            Map<String, Object> autoRecurring = new HashMap<>();
-            autoRecurring.put("frequency", 1);
-            autoRecurring.put("frequency_type", "months");
-            autoRecurring.put("transaction_amount", valorMensal.doubleValue());
-            autoRecurring.put("currency_id", "BRL");
-
-            Map<String, Object> body = new HashMap<>();
-            body.put("reason", "Site de Casamento (" + slug + ")");
-            body.put("external_reference", "site:" + siteId);
-            body.put("payer_email", emailPagador);
-            body.put("auto_recurring", autoRecurring);
-            body.put("back_url", back);
-            body.put("status", "pending");
-
+        } catch (IllegalStateException semPlano) {
+            if (preapprovalPlanIdConfigurado.isBlank() && (preapprovalPlanIdCache == null || preapprovalPlanIdCache.isBlank())) {
+                throw semPlano;
+            }
             try {
-                return lerCheckout(postMp("/preapproval", body));
-            } catch (IllegalStateException segundo) {
+                String planId = garantirPlanoMensal(back);
+                Map<String, Object> comPlano = new HashMap<>();
+                comPlano.put("preapproval_plan_id", planId);
+                comPlano.put("reason", "Site de Casamento (" + slug + ")");
+                comPlano.put("external_reference", "site:" + siteId);
+                comPlano.put("payer_email", emailPagador);
+                comPlano.put("back_url", back);
+                comPlano.put("status", "pending");
+                return lerCheckout(postMp("/preapproval", comPlano));
+            } catch (IllegalStateException comPlanoErro) {
                 throw new IllegalStateException(
-                        primeiro.getMessage() + " | fallback: " + segundo.getMessage(), segundo);
+                        semPlano.getMessage() + " | com plano: " + comPlanoErro.getMessage(), comPlanoErro);
             }
         }
     }
