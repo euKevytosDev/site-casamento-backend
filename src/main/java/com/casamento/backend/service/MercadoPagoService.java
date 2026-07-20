@@ -199,9 +199,7 @@ public class MercadoPagoService {
             JsonNode json = objectMapper.readTree(resposta);
             Map<String, String> out = new HashMap<>();
             out.put("id", json.path("id").asText());
-            String sandbox = json.path("sandbox_init_point").asText("");
-            String prod = json.path("init_point").asText("");
-            out.put("init_point", !prod.isBlank() ? prod : sandbox);
+            out.put("init_point", escolherInitPoint(json, sellerAccessToken));
             if (out.get("id").isBlank() || out.get("init_point").isBlank()) {
                 throw new IllegalStateException("Preferência inválida: " + resposta);
             }
@@ -356,9 +354,7 @@ public class MercadoPagoService {
             JsonNode json = objectMapper.readTree(resposta);
             Map<String, String> out = new HashMap<>();
             out.put("id", json.path("id").asText());
-            String sandbox = json.path("sandbox_init_point").asText("");
-            String prod = json.path("init_point").asText("");
-            out.put("init_point", !prod.isBlank() ? prod : sandbox);
+            out.put("init_point", escolherInitPoint(json, accessToken));
             out.put("status", json.path("status").asText("pending"));
             if (out.get("id").isBlank()) {
                 throw new IllegalStateException("Resposta do Mercado Pago sem id da assinatura.");
@@ -372,6 +368,19 @@ public class MercadoPagoService {
         } catch (Exception e) {
             throw new IllegalStateException("Resposta inválida do Mercado Pago ao criar assinatura.", e);
         }
+    }
+
+    /**
+     * Com token TEST- prioriza sandbox_init_point; com APP- prioriza init_point de produção.
+     */
+    private static String escolherInitPoint(JsonNode json, String token) {
+        String sandbox = json.path("sandbox_init_point").asText("");
+        String prod = json.path("init_point").asText("");
+        boolean teste = token != null && token.startsWith("TEST-");
+        if (teste) {
+            return !sandbox.isBlank() ? sandbox : prod;
+        }
+        return !prod.isBlank() ? prod : sandbox;
     }
 
     public static String encodeQuery(String value) {
