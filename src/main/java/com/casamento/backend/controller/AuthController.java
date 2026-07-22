@@ -10,6 +10,7 @@ import com.casamento.backend.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -49,6 +50,7 @@ public class AuthController {
     }
 
     /** Login da noiva (e-mail + senha do checkout). */
+    @Transactional(readOnly = true)
     @PostMapping("/login-noiva")
     public ResponseEntity<?> loginNoiva(@RequestBody LoginRequest request) {
         if (request.getLogin() == null || request.getLogin().isBlank()
