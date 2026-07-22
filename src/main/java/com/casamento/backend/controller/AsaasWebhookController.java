@@ -37,7 +37,7 @@ public class AsaasWebhookController {
         this.webhookToken = webhookToken == null ? "" : webhookToken.trim();
     }
 
-    @PostMapping("/asaas")
+    @PostMapping({"/asaas", "/asaas/"})
     public ResponseEntity<String> receber(
             @RequestHeader(value = "asaas-access-token", required = false) String asaasToken,
             @RequestBody(required = false) String body) {
@@ -59,7 +59,7 @@ public class AsaasWebhookController {
         return ResponseEntity.ok("ok");
     }
 
-    @GetMapping("/asaas")
+    @GetMapping({"/asaas", "/asaas/"})
     public ResponseEntity<String> ping() {
         return ResponseEntity.ok("ok");
     }
