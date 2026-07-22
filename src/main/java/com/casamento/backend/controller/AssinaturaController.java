@@ -1,10 +1,11 @@
 package com.casamento.backend.controller;
 
+import com.casamento.backend.service.AsaasService;
 import com.casamento.backend.service.AssinaturaService;
-import com.casamento.backend.service.MercadoPagoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -13,30 +14,32 @@ import java.util.Map;
 public class AssinaturaController {
 
     private final AssinaturaService assinaturaService;
-    private final MercadoPagoService mercadoPagoService;
+    private final AsaasService asaasService;
 
-    public AssinaturaController(AssinaturaService assinaturaService, MercadoPagoService mercadoPagoService) {
+    public AssinaturaController(AssinaturaService assinaturaService, AsaasService asaasService) {
         this.assinaturaService = assinaturaService;
-        this.mercadoPagoService = mercadoPagoService;
+        this.asaasService = asaasService;
     }
 
     @GetMapping("/plano")
     public Map<String, Object> plano() {
-        int permanencia = mercadoPagoService.getPermanenciaMinimaMeses();
-        return Map.of(
-                "nome", "Site de Casamento",
-                "valorMensal", mercadoPagoService.getValorMensal(),
-                "descricaoMensal", "Plano único — assinatura mensal, cancele quando quiser",
-                "permanenciaMinimaMeses", permanencia,
-                "cancelamentoLivre", permanencia <= 0,
-                "arrependimentoDias", 7,
-                "mpConfigurado", mercadoPagoService.configurado(),
-                "modoTeste", mercadoPagoService.modoTeste()
-        );
+        int permanencia = asaasService.getPermanenciaMinimaMeses();
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("nome", "Site de Casamento");
+        out.put("valorMensal", asaasService.getValorMensal());
+        out.put("descricaoMensal", "Plano único — assinatura mensal, cancele quando quiser");
+        out.put("permanenciaMinimaMeses", permanencia);
+        out.put("cancelamentoLivre", permanencia <= 0);
+        out.put("arrependimentoDias", 7);
+        out.put("gateway", "asaas");
+        out.put("asaasConfigurado", asaasService.configurado());
+        out.put("mpConfigurado", asaasService.configurado()); // compat landing antiga
+        out.put("modoTeste", asaasService.modoSandbox());
+        return out;
     }
 
     /**
-     * Landing: cadastro + um único checkout de assinatura mensal.
+     * Landing: cadastro + checkout de assinatura mensal (Asaas).
      */
     @PostMapping("/checkout")
     public ResponseEntity<?> checkout(@RequestBody Map<String, String> body) {
@@ -47,6 +50,7 @@ public class AssinaturaController {
                     str(body.get("slug")),
                     str(body.get("email")),
                     str(body.get("senha")),
+                    str(body.get("cpf")),
                     str(body.get("emailPagador"))
             );
             return ResponseEntity.ok(resultado);

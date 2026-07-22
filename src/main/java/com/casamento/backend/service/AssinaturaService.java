@@ -20,20 +20,23 @@ public class AssinaturaService {
     private final UsuarioNoivaRepository usuarioNoivaRepository;
     private final PasswordEncoder passwordEncoder;
     private final MercadoPagoService mercadoPagoService;
+    private final AsaasService asaasService;
 
     public AssinaturaService(
             SiteRepository siteRepository,
             UsuarioNoivaRepository usuarioNoivaRepository,
             PasswordEncoder passwordEncoder,
-            MercadoPagoService mercadoPagoService) {
+            MercadoPagoService mercadoPagoService,
+            AsaasService asaasService) {
         this.siteRepository = siteRepository;
         this.usuarioNoivaRepository = usuarioNoivaRepository;
         this.passwordEncoder = passwordEncoder;
         this.mercadoPagoService = mercadoPagoService;
+        this.asaasService = asaasService;
     }
 
     /**
-     * Cadastro + checkout de assinatura mensal.
+     * Cadastro + checkout de assinatura mensal (Asaas).
      * Se o e-mail já existe com site ainda PENDENTE, reabre o pagamento (não bloqueia).
      */
     @Transactional
@@ -43,11 +46,12 @@ public class AssinaturaService {
             String slug,
             String email,
             String senha,
+            String cpf,
             String emailPagador) {
 
         String slugNorm = normalizarSlug(slug);
         String emailNorm = email.trim().toLowerCase();
-        String emailMp = normalizarEmailPagador(emailPagador, emailNorm);
+        String emailCobranca = normalizarEmailPagador(emailPagador, emailNorm);
 
         if (slugNorm.isBlank()) {
             throw new IllegalArgumentException("Informe um slug (ex: mariajoao).");
@@ -55,8 +59,11 @@ public class AssinaturaService {
         if (senha == null || senha.length() < 6) {
             throw new IllegalArgumentException("A senha precisa ter pelo menos 6 caracteres.");
         }
-        if (emailMp.isBlank() || !emailMp.contains("@")) {
-            throw new IllegalArgumentException("Informe um e-mail válido para o pagamento no Mercado Pago.");
+        if (emailCobranca.isBlank() || !emailCobranca.contains("@")) {
+            throw new IllegalArgumentException("Informe um e-mail válido para a cobrança.");
+        }
+        if (!asaasService.configurado()) {
+            throw new IllegalStateException("Checkout indisponível: Asaas não configurado no servidor.");
         }
 
         var usuarioExistente = usuarioNoivaRepository.findByEmailIgnoreCase(emailNorm);
@@ -67,7 +74,7 @@ public class AssinaturaService {
                         "Já existe uma conta ativa com este e-mail. Entre no painel para continuar.");
             }
             return retomarCheckoutPendente(
-                    usuarioExistente.get(), siteExistente, nomeNoiva, nomeNoivo, slugNorm, senha, emailMp);
+                    usuarioExistente.get(), siteExistente, nomeNoiva, nomeNoivo, slugNorm, senha, cpf, emailCobranca);
         }
 
         if (siteRepository.findBySlug(slugNorm).isPresent()) {
@@ -96,7 +103,7 @@ public class AssinaturaService {
         usuario.setSite(site);
         usuarioNoivaRepository.save(usuario);
 
-        return gerarCheckoutAssinatura(site, emailMp);
+        return gerarCheckoutAssinatura(site, cpf, emailCobranca);
     }
 
     private Map<String, Object> retomarCheckoutPendente(
@@ -106,9 +113,9 @@ public class AssinaturaService {
             String nomeNoivo,
             String slugNorm,
             String senha,
-            String emailMp) {
+            String cpf,
+            String emailCobranca) {
 
-        // Permite trocar o slug só se estiver livre (ou for o mesmo do site)
         if (!slugNorm.equalsIgnoreCase(site.getSlug())) {
             if (slugReservado(slugNorm)) {
                 throw new IllegalArgumentException("Este link é reservado. Escolha outro (ex: maria-e-joao).");
@@ -127,10 +134,9 @@ public class AssinaturaService {
         usuarioNoivaRepository.save(usuario);
         siteRepository.save(site);
 
-        return gerarCheckoutAssinatura(site, emailMp);
+        return gerarCheckoutAssinatura(site, cpf, emailCobranca);
     }
 
-    /** E-mail do pagador no MP (pode ser de quem paga com cartão); senão usa o login do painel. */
     private static String normalizarEmailPagador(String emailPagador, String emailLogin) {
         if (emailPagador != null && !emailPagador.isBlank()) {
             return emailPagador.trim().toLowerCase();
@@ -138,23 +144,32 @@ public class AssinaturaService {
         return emailLogin == null ? "" : emailLogin.trim().toLowerCase();
     }
 
-    private Map<String, Object> gerarCheckoutAssinatura(Site site, String emailMp) {
-        Map<String, String> assinatura = mercadoPagoService.criarAssinaturaMensal(
-                site.getId(), site.getSlug(), emailMp);
+    private Map<String, Object> gerarCheckoutAssinatura(Site site, String cpf, String emailCobranca) {
+        String nomeCliente = site.getNomeNoiva() + " & " + site.getNomeNoivo();
+        String subExistente = site.getMpPreapprovalId();
+        if (subExistente != null && !subExistente.startsWith("sub_")) {
+            subExistente = null;
+        }
 
-        String id = assinatura.get("id");
-        String planId = assinatura.get("plan_id");
-        if (planId != null && !planId.isBlank()) {
-            site.setMpPreferenceId(planId);
+        Map<String, String> assinatura = asaasService.criarAssinaturaMensal(
+                site.getId(),
+                site.getSlug(),
+                nomeCliente,
+                emailCobranca,
+                cpf,
+                subExistente);
+
+        String subId = assinatura.get("id");
+        String customerId = assinatura.get("customer_id");
+        if (customerId != null && !customerId.isBlank()) {
+            site.setMpPreferenceId(customerId);
         }
-        // id "plan:xxx" = ainda não existe preapproval; webhook vai preencher
-        if (id != null && !id.startsWith("plan:")) {
-            site.setMpPreapprovalId(id);
+        if (subId != null && !subId.isBlank()) {
+            site.setMpPreapprovalId(subId);
         }
-        // Reusa mp_payment_id só enquanto PENDENTE, sem criar coluna nova no banco
-        site.setMpPaymentId("email:" + emailMp);
+        site.setMpPaymentId("email:" + emailCobranca);
         site.setMpAssinaturaInitPoint(assinatura.get("init_point"));
-        site.setMpAssinaturaStatus(assinatura.getOrDefault("status", "pending"));
+        site.setMpAssinaturaStatus(assinatura.getOrDefault("status", "ACTIVE"));
         site.setAssinaturaStatus("PENDENTE");
         site.setAtivo(false);
         siteRepository.save(site);
@@ -163,13 +178,14 @@ public class AssinaturaService {
         out.put("siteId", site.getId());
         out.put("slug", site.getSlug());
         out.put("checkoutUrl", assinatura.get("init_point"));
-        out.put("valorMensal", mercadoPagoService.getValorMensal());
-        out.put("permanenciaMinimaMeses", mercadoPagoService.getPermanenciaMinimaMeses());
-        out.put("cancelamentoLivre", mercadoPagoService.getPermanenciaMinimaMeses() <= 0);
-        out.put("mensagem", "Autorize a assinatura de R$ "
-                + mercadoPagoService.getValorMensal()
-                + "/mês no Mercado Pago. Sem fidelidade — cancele quando quiser.");
-        out.put("modoTeste", mercadoPagoService.modoTeste());
+        out.put("valorMensal", asaasService.getValorMensal());
+        out.put("permanenciaMinimaMeses", asaasService.getPermanenciaMinimaMeses());
+        out.put("cancelamentoLivre", asaasService.getPermanenciaMinimaMeses() <= 0);
+        out.put("gateway", "asaas");
+        out.put("mensagem", "Pague a assinatura de R$ "
+                + asaasService.getValorMensal()
+                + "/mês (PIX, boleto ou cartão). Sem fidelidade — cancele quando quiser.");
+        out.put("modoTeste", asaasService.modoSandbox());
         out.put("retomado", true);
         return out;
     }
@@ -183,8 +199,98 @@ public class AssinaturaService {
             return true;
         }
         String mp = site.getMpAssinaturaStatus();
-        return mp != null && "authorized".equalsIgnoreCase(mp);
+        return mp != null && ("authorized".equalsIgnoreCase(mp) || "ACTIVE".equalsIgnoreCase(mp));
     }
+
+    /** Webhook Asaas — ativa/desativa conforme eventos de cobrança da assinatura. */
+    @Transactional
+    public void processarWebhookAsaas(String event, JsonNode payload) {
+        if (event == null || event.isBlank()) {
+            return;
+        }
+        String ev = event.trim().toUpperCase();
+
+        if (ev.startsWith("PAYMENT_")) {
+            JsonNode payment = payload.path("payment");
+            if (payment.isMissingNode() || payment.isNull()) {
+                return;
+            }
+            processarPagamentoAsaas(ev, payment);
+            return;
+        }
+
+        if (ev.startsWith("SUBSCRIPTION_")) {
+            JsonNode sub = payload.path("subscription");
+            String subId = sub.path("id").asText("");
+            if (subId.isBlank()) {
+                subId = payload.path("id").asText("");
+            }
+            if (subId.isBlank()) {
+                return;
+            }
+            Site site = siteRepository.findByMpPreapprovalId(subId).orElse(null);
+            if (site == null || slugReservado(site.getSlug())) {
+                return;
+            }
+            if ("SUBSCRIPTION_DELETED".equals(ev)
+                    || "SUBSCRIPTION_INACTIVATED".equals(ev)
+                    || "SUBSCRIPTION_EXPIRED".equals(ev)) {
+                site.setAtivo(false);
+                site.setAssinaturaStatus("CANCELADA");
+                site.setMpAssinaturaStatus("INACTIVE");
+                siteRepository.save(site);
+            }
+        }
+    }
+
+    private void processarPagamentoAsaas(String event, JsonNode payment) {
+        String external = payment.path("externalReference").asText("");
+        String subscriptionId = payment.path("subscription").asText("");
+        String paymentId = payment.path("id").asText("");
+        String status = payment.path("status").asText("");
+
+        Site site = resolverSitePorExternal(external);
+        if (site == null && !subscriptionId.isBlank()) {
+            site = siteRepository.findByMpPreapprovalId(subscriptionId).orElse(null);
+        }
+        if (site == null || slugReservado(site.getSlug())) {
+            return;
+        }
+
+        if (!subscriptionId.isBlank()) {
+            site.setMpPreapprovalId(subscriptionId);
+        }
+
+        boolean pago = "PAYMENT_CONFIRMED".equals(event)
+                || "PAYMENT_RECEIVED".equals(event)
+                || "RECEIVED".equalsIgnoreCase(status)
+                || "CONFIRMED".equalsIgnoreCase(status)
+                || "RECEIVED_IN_CASH".equalsIgnoreCase(status);
+
+        boolean falha = "PAYMENT_OVERDUE".equals(event)
+                || "PAYMENT_DELETED".equals(event)
+                || "PAYMENT_REFUNDED".equals(event)
+                || "PAYMENT_CHARGEBACK_REQUESTED".equals(event)
+                || "PAYMENT_CHARGEBACK_DISPUTE".equals(event)
+                || "PAYMENT_AWAITING_CHARGEBACK_REVERSAL".equals(event)
+                || "PAYMENT_DUNNING_REQUESTED".equals(event)
+                || "REFUNDED".equalsIgnoreCase(status)
+                || "CHARGEBACK".equalsIgnoreCase(status);
+
+        if (pago) {
+            ativarSite(site, paymentId);
+            site.setMpAssinaturaStatus("ACTIVE");
+            siteRepository.save(site);
+        } else if (falha && site.isAtivo()) {
+            // Atraso/estorno só derruba se já estava ativo (renovação)
+            desativarPorFaltaPagamento(site.getId());
+        } else if ("PAYMENT_OVERDUE".equals(event) && "PENDENTE".equalsIgnoreCase(site.getAssinaturaStatus())) {
+            site.setMpAssinaturaStatus("OVERDUE");
+            siteRepository.save(site);
+        }
+    }
+
+    // --- Mercado Pago (legado / presentes) ---
 
     @Transactional
     public void processarPagamentoAprovado(String paymentId) {
@@ -193,7 +299,7 @@ public class AssinaturaService {
 
         String external = pagamento.path("external_reference").asText("");
         if (external.startsWith("pedido:")) {
-            return; // presente do casal — tratado em PresenteService
+            return;
         }
         Site site = resolverSitePorExternal(external);
 
@@ -355,7 +461,6 @@ public class AssinaturaService {
         return slug.trim().toLowerCase().replaceAll("[^a-z0-9-]", "");
     }
 
-    /** Slugs do produto (vitrine + template) — não podem ser usados por cliente. */
     private static boolean slugReservado(String slug) {
         return "rafaekevin".equals(slug) || "modelo".equals(slug) || "admin".equals(slug);
     }
