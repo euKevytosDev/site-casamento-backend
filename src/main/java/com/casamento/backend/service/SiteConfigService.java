@@ -44,6 +44,7 @@ public class SiteConfigService {
         r.setFotoHeroUrl(site.getFotoHeroUrl());
         r.setFotoSecundariaUrl(site.getFotoSecundariaUrl());
         r.setFotoLocalUrl(site.getFotoLocalUrl());
+        r.setFotoLocalFestaUrl(site.getFotoLocalFestaUrl());
         r.setFotoRodapeUrl(site.getFotoRodapeUrl());
         r.setFotosCarrossel(parseListaUrls(site.getFotosCarrossel()));
         r.setCores(montarCores(site));

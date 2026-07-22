@@ -30,6 +30,7 @@ public class SiteConfigResponse {
     private String fotoHeroUrl;
     private String fotoSecundariaUrl;
     private String fotoLocalUrl;
+    private String fotoLocalFestaUrl;
     private String fotoRodapeUrl;
     private List<String> fotosCarrossel;
     private Map<String, String> cores;
@@ -105,6 +106,9 @@ public class SiteConfigResponse {
 
     public String getFotoLocalUrl() { return fotoLocalUrl; }
     public void setFotoLocalUrl(String fotoLocalUrl) { this.fotoLocalUrl = fotoLocalUrl; }
+
+    public String getFotoLocalFestaUrl() { return fotoLocalFestaUrl; }
+    public void setFotoLocalFestaUrl(String fotoLocalFestaUrl) { this.fotoLocalFestaUrl = fotoLocalFestaUrl; }
 
     public String getFotoRodapeUrl() { return fotoRodapeUrl; }
     public void setFotoRodapeUrl(String fotoRodapeUrl) { this.fotoRodapeUrl = fotoRodapeUrl; }

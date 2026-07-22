@@ -87,6 +87,10 @@ public class Site {
     @Column(name = "foto_local_url", length = 500)
     private String fotoLocalUrl;
 
+    /** Foto do local da festa (quando cerimônia e festa são separados) */
+    @Column(name = "foto_local_festa_url", length = 500)
+    private String fotoLocalFestaUrl;
+
     /** Foto final do rodapé (bloco .fotodois) */
     @Column(name = "foto_rodape_url", length = 500)
     private String fotoRodapeUrl;
@@ -244,6 +248,9 @@ public class Site {
 
     public String getFotoLocalUrl() { return fotoLocalUrl; }
     public void setFotoLocalUrl(String fotoLocalUrl) { this.fotoLocalUrl = fotoLocalUrl; }
+
+    public String getFotoLocalFestaUrl() { return fotoLocalFestaUrl; }
+    public void setFotoLocalFestaUrl(String fotoLocalFestaUrl) { this.fotoLocalFestaUrl = fotoLocalFestaUrl; }
 
     public String getFotoRodapeUrl() { return fotoRodapeUrl; }
     public void setFotoRodapeUrl(String fotoRodapeUrl) { this.fotoRodapeUrl = fotoRodapeUrl; }

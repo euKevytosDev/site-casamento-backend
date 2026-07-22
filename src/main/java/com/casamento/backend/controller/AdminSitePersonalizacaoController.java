@@ -184,7 +184,7 @@ public class AdminSitePersonalizacaoController {
 
     /**
      * Upload de mídia do layout.
-     * tipo = hero | secundaria | local | carrossel
+     * tipo = hero | secundaria | local | local-festa | carrossel
      * carrosselIndex (opcional, 0-based) — se omitido no carrossel, adiciona no fim.
      */
     @PostMapping(value = "/atual/midia", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -200,9 +200,9 @@ public class AdminSitePersonalizacaoController {
         }
 
         String tipoNorm = tipo == null ? "" : tipo.trim().toLowerCase();
-        if (!List.of("hero", "secundaria", "local", "rodape", "carrossel", "musica").contains(tipoNorm)) {
+        if (!List.of("hero", "secundaria", "local", "local-festa", "rodape", "carrossel", "musica").contains(tipoNorm)) {
             return ResponseEntity.badRequest()
-                    .body("tipo inválido. Use: hero, secundaria, local, rodape, carrossel ou musica.");
+                    .body("tipo inválido. Use: hero, secundaria, local, local-festa, rodape, carrossel ou musica.");
         }
 
         try {
@@ -230,6 +230,10 @@ public class AdminSitePersonalizacaoController {
                 case "local" -> {
                     trocarUrl(site.getFotoLocalUrl(), url);
                     site.setFotoLocalUrl(url);
+                }
+                case "local-festa" -> {
+                    trocarUrl(site.getFotoLocalFestaUrl(), url);
+                    site.setFotoLocalFestaUrl(url);
                 }
                 case "rodape" -> {
                     trocarUrl(site.getFotoRodapeUrl(), url);
