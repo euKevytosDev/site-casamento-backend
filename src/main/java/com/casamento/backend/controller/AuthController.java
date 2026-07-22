@@ -13,6 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
@@ -83,5 +85,58 @@ public class AuthController {
 
         String token = jwtService.gerarToken(usuario.getEmail(), site.getSlug(), "NOIVA");
         return ResponseEntity.ok(new LoginResponse(token, usuario.getEmail(), site.getSlug(), "NOIVA"));
+    }
+
+    /**
+     * Recuperação sem SMTP: e-mail da conta + slug do site (prova de posse).
+     * Body: { email, slug, novaSenha }
+     */
+    @Transactional
+    @PostMapping("/recuperar-senha")
+    public ResponseEntity<?> recuperarSenha(@RequestBody Map<String, String> body) {
+        String email = str(body.get("email")).toLowerCase();
+        String slug = normalizarSlug(str(body.get("slug")));
+        String novaSenha = body.get("novaSenha") == null ? "" : body.get("novaSenha");
+
+        if (email.isBlank() || !email.contains("@") || slug.isBlank()) {
+            return ResponseEntity.badRequest().body("Informe o e-mail da conta e o link do site.");
+        }
+        if (novaSenha.length() < 6) {
+            return ResponseEntity.badRequest().body("A nova senha precisa ter pelo menos 6 caracteres.");
+        }
+
+        UsuarioNoiva usuario = usuarioNoivaRepository.findByEmailIgnoreCase(email).orElse(null);
+        if (usuario == null || usuario.getSite() == null
+                || !slug.equalsIgnoreCase(usuario.getSite().getSlug())) {
+            // Mensagem genérica — não revela se o e-mail existe
+            return ResponseEntity.status(400).body("E-mail e link do site não conferem. Confira e tente de novo.");
+        }
+
+        usuario.setSenhaHash(passwordEncoder.encode(novaSenha));
+        usuarioNoivaRepository.save(usuario);
+
+        return ResponseEntity.ok(Map.of(
+                "ok", true,
+                "mensagem", "Senha atualizada. Você já pode entrar no painel."
+        ));
+    }
+
+    private static String str(String v) {
+        return v == null ? "" : v.trim();
+    }
+
+    private static String normalizarSlug(String slug) {
+        if (slug == null) return "";
+        String s = slug.trim().toLowerCase();
+        // Aceita URL colada: .../?site=foo ou .../foo
+        int idx = s.indexOf("site=");
+        if (idx >= 0) {
+            s = s.substring(idx + 5);
+            int amp = s.indexOf('&');
+            if (amp >= 0) s = s.substring(0, amp);
+            int hash = s.indexOf('#');
+            if (hash >= 0) s = s.substring(0, hash);
+        }
+        return s.replaceAll("[^a-z0-9-]", "");
     }
 }
