@@ -52,6 +52,16 @@ public class Site {
     @Column(name = "maps_url", length = 500)
     private String mapsUrl;
 
+    /** true = cerimônia e festa no mesmo endereço */
+    @Column(name = "mesmo_local", nullable = false)
+    private boolean mesmoLocal = true;
+
+    @Column(name = "local_nome_festa")
+    private String localNomeFesta;
+
+    @Column(name = "maps_url_festa", length = 500)
+    private String mapsUrlFesta;
+
     /** Versículo bíblico exibido no convite */
     @Column(name = "versiculo", columnDefinition = "TEXT")
     private String versiculo;
@@ -204,6 +214,15 @@ public class Site {
 
     public String getMapsUrl() { return mapsUrl; }
     public void setMapsUrl(String mapsUrl) { this.mapsUrl = mapsUrl; }
+
+    public boolean isMesmoLocal() { return mesmoLocal; }
+    public void setMesmoLocal(boolean mesmoLocal) { this.mesmoLocal = mesmoLocal; }
+
+    public String getLocalNomeFesta() { return localNomeFesta; }
+    public void setLocalNomeFesta(String localNomeFesta) { this.localNomeFesta = localNomeFesta; }
+
+    public String getMapsUrlFesta() { return mapsUrlFesta; }
+    public void setMapsUrlFesta(String mapsUrlFesta) { this.mapsUrlFesta = mapsUrlFesta; }
 
     public String getVersiculo() { return versiculo; }
     public void setVersiculo(String versiculo) { this.versiculo = versiculo; }

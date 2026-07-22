@@ -112,6 +112,15 @@ public class AdminSitePersonalizacaoController {
         if (body.containsKey("mapsUrl")) {
             site.setMapsUrl(blankToNull(asString(body.get("mapsUrl"))));
         }
+        if (body.containsKey("mesmoLocal")) {
+            site.setMesmoLocal(asBoolean(body.get("mesmoLocal"), true));
+        }
+        if (body.containsKey("localNomeFesta")) {
+            site.setLocalNomeFesta(blankToNull(asString(body.get("localNomeFesta"))));
+        }
+        if (body.containsKey("mapsUrlFesta")) {
+            site.setMapsUrlFesta(blankToNull(asString(body.get("mapsUrlFesta"))));
+        }
         if (body.containsKey("versiculo")) {
             site.setVersiculo(blankToNull(asString(body.get("versiculo"))));
         }
@@ -289,6 +298,14 @@ public class AdminSitePersonalizacaoController {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private static boolean asBoolean(Object value, boolean padrao) {
+        if (value == null) return padrao;
+        if (value instanceof Boolean b) return b;
+        String s = String.valueOf(value).trim().toLowerCase();
+        if (s.isEmpty()) return padrao;
+        return s.equals("true") || s.equals("1") || s.equals("sim") || s.equals("yes");
     }
 
     private static LocalDate parseData(Object value) {

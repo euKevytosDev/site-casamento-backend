@@ -1,0 +1,4 @@
+-- Locais separados: cerimônia vs festa
+ALTER TABLE site ADD COLUMN IF NOT EXISTS mesmo_local BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE site ADD COLUMN IF NOT EXISTS local_nome_festa VARCHAR(255);
+ALTER TABLE site ADD COLUMN IF NOT EXISTS maps_url_festa VARCHAR(500);

@@ -34,6 +34,9 @@ public class SiteConfigService {
         r.setPaisNoivo(site.getPaisNoivo());
         r.setLocalNome(site.getLocalNome());
         r.setMapsUrl(site.getMapsUrl());
+        r.setMesmoLocal(site.isMesmoLocal());
+        r.setLocalNomeFesta(site.getLocalNomeFesta());
+        r.setMapsUrlFesta(site.getMapsUrlFesta());
         r.setVersiculo(site.getVersiculo());
         r.setFraseBencao(site.getFraseBencao());
         r.setTituloGaleria(site.getTituloGaleria());

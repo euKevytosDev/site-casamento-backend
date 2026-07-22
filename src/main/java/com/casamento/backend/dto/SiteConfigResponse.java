@@ -20,6 +20,9 @@ public class SiteConfigResponse {
     private String paisNoivo;
     private String localNome;
     private String mapsUrl;
+    private boolean mesmoLocal = true;
+    private String localNomeFesta;
+    private String mapsUrlFesta;
     private String versiculo;
     private String fraseBencao;
     private String tituloGaleria;
@@ -72,6 +75,15 @@ public class SiteConfigResponse {
 
     public String getMapsUrl() { return mapsUrl; }
     public void setMapsUrl(String mapsUrl) { this.mapsUrl = mapsUrl; }
+
+    public boolean isMesmoLocal() { return mesmoLocal; }
+    public void setMesmoLocal(boolean mesmoLocal) { this.mesmoLocal = mesmoLocal; }
+
+    public String getLocalNomeFesta() { return localNomeFesta; }
+    public void setLocalNomeFesta(String localNomeFesta) { this.localNomeFesta = localNomeFesta; }
+
+    public String getMapsUrlFesta() { return mapsUrlFesta; }
+    public void setMapsUrlFesta(String mapsUrlFesta) { this.mapsUrlFesta = mapsUrlFesta; }
 
     public String getVersiculo() { return versiculo; }
     public void setVersiculo(String versiculo) { this.versiculo = versiculo; }
