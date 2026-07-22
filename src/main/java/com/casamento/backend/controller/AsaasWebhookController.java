@@ -7,11 +7,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /**
  * Webhooks Asaas — liberação/bloqueio da assinatura SaaS.
- * Configure no painel Asaas a URL:
- *   POST https://…/api/webhooks/asaas
- * e o token de autenticação (enviado no header asaas-access-token).
+ * Responde 200 na hora (Asaas corta a fila se demorar / falhar).
  */
 @RestController
 @RequestMapping("/api/webhooks")
@@ -21,6 +22,11 @@ public class AsaasWebhookController {
     private final AssinaturaService assinaturaService;
     private final ObjectMapper objectMapper;
     private final String webhookToken;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "asaas-webhook");
+        t.setDaemon(true);
+        return t;
+    });
 
     public AsaasWebhookController(
             AssinaturaService assinaturaService,
@@ -36,20 +42,18 @@ public class AsaasWebhookController {
             @RequestHeader(value = "asaas-access-token", required = false) String asaasToken,
             @RequestBody(required = false) String body) {
 
-        // Sempre 200: Asaas interrompe a fila após falhas consecutivas (ex.: 401).
-        // Token inválido só ignora o evento; não derruba a sincronização.
         boolean tokenOk = webhookToken.isBlank()
                 || (asaasToken != null && webhookToken.equals(asaasToken.trim()));
 
-        if (tokenOk) {
-            try {
-                if (body != null && !body.isBlank()) {
-                    JsonNode json = objectMapper.readTree(body);
-                    String event = json.path("event").asText("");
-                    assinaturaService.processarWebhookAsaas(event, json);
+        if (tokenOk && body != null && !body.isBlank()) {
+            final String payload = body;
+            executor.execute(() -> {
+                try {
+                    JsonNode json = objectMapper.readTree(payload);
+                    assinaturaService.processarWebhookAsaas(json.path("event").asText(""), json);
+                } catch (Exception ignored) {
                 }
-            } catch (Exception ignored) {
-            }
+            });
         }
 
         return ResponseEntity.ok("ok");

@@ -72,7 +72,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return 5;
         }
         if (path.startsWith("/api/webhooks/")) {
-            return 60;
+            // Asaas pode reenviar em lote ao criar/reativar a fila; 429 interrompe a sync.
+            return 0;
         }
         if (path.equals("/api/presenca/confirmar-familia")) {
             return 20;
