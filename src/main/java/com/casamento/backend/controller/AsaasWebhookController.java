@@ -36,19 +36,20 @@ public class AsaasWebhookController {
             @RequestHeader(value = "asaas-access-token", required = false) String asaasToken,
             @RequestBody(required = false) String body) {
 
-        if (!webhookToken.isBlank()) {
-            if (asaasToken == null || !webhookToken.equals(asaasToken.trim())) {
-                return ResponseEntity.status(401).body("token inválido");
-            }
-        }
+        // Sempre 200: Asaas interrompe a fila após falhas consecutivas (ex.: 401).
+        // Token inválido só ignora o evento; não derruba a sincronização.
+        boolean tokenOk = webhookToken.isBlank()
+                || (asaasToken != null && webhookToken.equals(asaasToken.trim()));
 
-        try {
-            if (body != null && !body.isBlank()) {
-                JsonNode json = objectMapper.readTree(body);
-                String event = json.path("event").asText("");
-                assinaturaService.processarWebhookAsaas(event, json);
+        if (tokenOk) {
+            try {
+                if (body != null && !body.isBlank()) {
+                    JsonNode json = objectMapper.readTree(body);
+                    String event = json.path("event").asText("");
+                    assinaturaService.processarWebhookAsaas(event, json);
+                }
+            } catch (Exception ignored) {
             }
-        } catch (Exception ignored) {
         }
 
         return ResponseEntity.ok("ok");
