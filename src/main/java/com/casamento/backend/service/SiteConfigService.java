@@ -41,6 +41,10 @@ public class SiteConfigService {
         r.setFraseBencao(site.getFraseBencao());
         r.setTituloGaleria(site.getTituloGaleria());
         r.setHistoriaCurta(site.getHistoriaCurta());
+        r.setDresscodeTraje(site.getDresscodeTraje());
+        r.setDresscodeTexto(site.getDresscodeTexto());
+        r.setDresscodeCores(site.getDresscodeCores());
+        r.setDresscodeRodape(site.getDresscodeRodape());
         r.setFotoHeroUrl(site.getFotoHeroUrl());
         r.setFotoSecundariaUrl(site.getFotoSecundariaUrl());
         r.setFotoLocalUrl(site.getFotoLocalUrl());

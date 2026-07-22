@@ -141,6 +141,34 @@ public class AdminSitePersonalizacaoController {
             }
             site.setHistoriaCurta(blankToNull(hist));
         }
+        if (body.containsKey("dresscodeTraje")) {
+            String traje = asString(body.get("dresscodeTraje"));
+            if (traje.length() > 80) {
+                return ResponseEntity.badRequest().body("Dress code (traje): no máximo 80 caracteres.");
+            }
+            site.setDresscodeTraje(blankToNull(traje));
+        }
+        if (body.containsKey("dresscodeTexto")) {
+            String txt = asString(body.get("dresscodeTexto"));
+            if (txt.length() > 800) {
+                return ResponseEntity.badRequest().body("Dress code (texto): no máximo 800 caracteres.");
+            }
+            site.setDresscodeTexto(blankToNull(txt));
+        }
+        if (body.containsKey("dresscodeCores")) {
+            String coresDress = asString(body.get("dresscodeCores"));
+            if (coresDress.length() > 800) {
+                return ResponseEntity.badRequest().body("Dress code (cores): no máximo 800 caracteres.");
+            }
+            site.setDresscodeCores(blankToNull(coresDress));
+        }
+        if (body.containsKey("dresscodeRodape")) {
+            String rodape = asString(body.get("dresscodeRodape"));
+            if (rodape.length() > 200) {
+                return ResponseEntity.badRequest().body("Dress code (rodapé): no máximo 200 caracteres.");
+            }
+            site.setDresscodeRodape(blankToNull(rodape));
+        }
         if (body.containsKey("pixChave")) {
             site.setPixChave(blankToNull(asString(body.get("pixChave"))));
         }

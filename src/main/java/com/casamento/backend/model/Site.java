@@ -78,6 +78,22 @@ public class Site {
     @Column(name = "historia_curta", length = 500)
     private String historiaCurta;
 
+    /** Nome do traje (ex.: Esporte Fino) */
+    @Column(name = "dresscode_traje", length = 80)
+    private String dresscodeTraje;
+
+    /** Texto explicando o traje sugerido */
+    @Column(name = "dresscode_texto", length = 800)
+    private String dresscodeTexto;
+
+    /** Cores reservadas / a evitar */
+    @Column(name = "dresscode_cores", length = 800)
+    private String dresscodeCores;
+
+    /** Frase final do modal dress code */
+    @Column(name = "dresscode_rodape", length = 200)
+    private String dresscodeRodape;
+
     @Column(name = "foto_hero_url", length = 500)
     private String fotoHeroUrl;
 
@@ -239,6 +255,18 @@ public class Site {
 
     public String getHistoriaCurta() { return historiaCurta; }
     public void setHistoriaCurta(String historiaCurta) { this.historiaCurta = historiaCurta; }
+
+    public String getDresscodeTraje() { return dresscodeTraje; }
+    public void setDresscodeTraje(String dresscodeTraje) { this.dresscodeTraje = dresscodeTraje; }
+
+    public String getDresscodeTexto() { return dresscodeTexto; }
+    public void setDresscodeTexto(String dresscodeTexto) { this.dresscodeTexto = dresscodeTexto; }
+
+    public String getDresscodeCores() { return dresscodeCores; }
+    public void setDresscodeCores(String dresscodeCores) { this.dresscodeCores = dresscodeCores; }
+
+    public String getDresscodeRodape() { return dresscodeRodape; }
+    public void setDresscodeRodape(String dresscodeRodape) { this.dresscodeRodape = dresscodeRodape; }
 
     public String getFotoHeroUrl() { return fotoHeroUrl; }
     public void setFotoHeroUrl(String fotoHeroUrl) { this.fotoHeroUrl = fotoHeroUrl; }

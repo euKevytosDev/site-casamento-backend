@@ -27,6 +27,10 @@ public class SiteConfigResponse {
     private String fraseBencao;
     private String tituloGaleria;
     private String historiaCurta;
+    private String dresscodeTraje;
+    private String dresscodeTexto;
+    private String dresscodeCores;
+    private String dresscodeRodape;
     private String fotoHeroUrl;
     private String fotoSecundariaUrl;
     private String fotoLocalUrl;
@@ -97,6 +101,18 @@ public class SiteConfigResponse {
 
     public String getHistoriaCurta() { return historiaCurta; }
     public void setHistoriaCurta(String historiaCurta) { this.historiaCurta = historiaCurta; }
+
+    public String getDresscodeTraje() { return dresscodeTraje; }
+    public void setDresscodeTraje(String dresscodeTraje) { this.dresscodeTraje = dresscodeTraje; }
+
+    public String getDresscodeTexto() { return dresscodeTexto; }
+    public void setDresscodeTexto(String dresscodeTexto) { this.dresscodeTexto = dresscodeTexto; }
+
+    public String getDresscodeCores() { return dresscodeCores; }
+    public void setDresscodeCores(String dresscodeCores) { this.dresscodeCores = dresscodeCores; }
+
+    public String getDresscodeRodape() { return dresscodeRodape; }
+    public void setDresscodeRodape(String dresscodeRodape) { this.dresscodeRodape = dresscodeRodape; }
 
     public String getFotoHeroUrl() { return fotoHeroUrl; }
     public void setFotoHeroUrl(String fotoHeroUrl) { this.fotoHeroUrl = fotoHeroUrl; }
