@@ -46,7 +46,7 @@ public class PresenteService {
             PixPayloadService pixPayloadService,
             MercadoPagoService mercadoPagoService,
             ObjectMapper objectMapper,
-            @Value("${app.site-public-base-url:https://rafaekevin.com.br}") String sitePublicBaseUrl) {
+            @Value("${app.site-public-base-url:https://app.somosloven.com}") String sitePublicBaseUrl) {
         this.presenteRepository = presenteRepository;
         this.historicoCompraRepository = historicoCompraRepository;
         this.pedidoPresenteRepository = pedidoPresenteRepository;
@@ -55,7 +55,7 @@ public class PresenteService {
         this.mercadoPagoService = mercadoPagoService;
         this.objectMapper = objectMapper;
         this.sitePublicBaseUrl = sitePublicBaseUrl == null || sitePublicBaseUrl.isBlank()
-                ? "https://rafaekevin.com.br"
+                ? "https://app.somosloven.com"
                 : sitePublicBaseUrl.replaceAll("/$", "");
     }
 

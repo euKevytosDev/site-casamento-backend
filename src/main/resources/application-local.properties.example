@@ -28,7 +28,7 @@ PIX_CIDADE=Sao Paulo
 # Na aplicação MP, ative o produto Assinaturas.
 MERCADOPAGO_ACCESS_TOKEN=
 MERCADOPAGO_NOTIFICATION_URL=https://SEU-BACKEND.onrender.com/api/webhooks/mercadopago
-MERCADOPAGO_BACK_URL_SUCCESS=https://eukevytosdev.github.io/site-casamento-landing/sucesso.html
-MERCADOPAGO_BACK_URL_FAILURE=https://eukevytosdev.github.io/site-casamento-landing/
+MERCADOPAGO_BACK_URL_SUCCESS=https://somosloven.com/sucesso.html
+MERCADOPAGO_BACK_URL_FAILURE=https://somosloven.com/
 MERCADOPAGO_VALOR_MENSAL=59.90
 MERCADOPAGO_PERMANENCIA_MINIMA_MESES=6
