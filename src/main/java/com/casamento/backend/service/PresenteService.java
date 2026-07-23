@@ -46,7 +46,7 @@ public class PresenteService {
             PixPayloadService pixPayloadService,
             MercadoPagoService mercadoPagoService,
             ObjectMapper objectMapper,
-            @Value("${app.site-public-base-url:https://app.somosloven.com.br}") String sitePublicBaseUrl) {
+            @Value("${app.site-public-base-url:https://somosloven.com.br}") String sitePublicBaseUrl) {
         this.presenteRepository = presenteRepository;
         this.historicoCompraRepository = historicoCompraRepository;
         this.pedidoPresenteRepository = pedidoPresenteRepository;
@@ -55,7 +55,7 @@ public class PresenteService {
         this.mercadoPagoService = mercadoPagoService;
         this.objectMapper = objectMapper;
         this.sitePublicBaseUrl = sitePublicBaseUrl == null || sitePublicBaseUrl.isBlank()
-                ? "https://app.somosloven.com.br"
+                ? "https://somosloven.com.br"
                 : sitePublicBaseUrl.replaceAll("/$", "");
     }
 
@@ -168,9 +168,9 @@ public class PresenteService {
         }
         pedido = pedidoPresenteRepository.save(pedido);
 
-        String base = sitePublicBaseUrl + "/index.html?site=" + MercadoPagoService.encodeQuery(site.getSlug());
-        String ok = base + "&presente_pago=1&pedido=" + pedido.getId();
-        String fail = base + "&presente_pago=0";
+        String base = sitePublicBaseUrl.replaceAll("/$", "") + "/" + site.getSlug();
+        String ok = base + "?presente_pago=1&pedido=" + pedido.getId();
+        String fail = base + "?presente_pago=0";
 
         Map<String, String> pref = mercadoPagoService.criarPreferenciaPresente(
                 site.getMpSellerAccessToken(),

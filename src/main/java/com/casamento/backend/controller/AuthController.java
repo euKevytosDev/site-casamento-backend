@@ -128,7 +128,7 @@ public class AuthController {
     private static String normalizarSlug(String slug) {
         if (slug == null) return "";
         String s = slug.trim().toLowerCase();
-        // Aceita URL colada: .../?site=foo ou .../foo
+        // Aceita URL colada: .../?site=foo ou https://dominio/foo
         int idx = s.indexOf("site=");
         if (idx >= 0) {
             s = s.substring(idx + 5);
@@ -136,6 +136,17 @@ public class AuthController {
             if (amp >= 0) s = s.substring(0, amp);
             int hash = s.indexOf('#');
             if (hash >= 0) s = s.substring(0, hash);
+        } else if (s.contains("://") || s.startsWith("/")) {
+            try {
+                String path = s.contains("://") ? java.net.URI.create(s).getPath() : s;
+                if (path == null) path = "";
+                String[] parts = path.replaceAll("^/+", "").replaceAll("/+$", "").split("/");
+                if (parts.length >= 1 && !parts[0].isBlank()) {
+                    s = parts[parts.length - 1];
+                }
+            } catch (Exception ignored) {
+                // mantém s original
+            }
         }
         return s.replaceAll("[^a-z0-9-]", "");
     }
