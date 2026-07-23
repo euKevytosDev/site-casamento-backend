@@ -21,18 +21,21 @@ public class AssinaturaService {
     private final PasswordEncoder passwordEncoder;
     private final MercadoPagoService mercadoPagoService;
     private final AsaasService asaasService;
+    private final PresentesPadraoService presentesPadraoService;
 
     public AssinaturaService(
             SiteRepository siteRepository,
             UsuarioNoivaRepository usuarioNoivaRepository,
             PasswordEncoder passwordEncoder,
             MercadoPagoService mercadoPagoService,
-            AsaasService asaasService) {
+            AsaasService asaasService,
+            PresentesPadraoService presentesPadraoService) {
         this.siteRepository = siteRepository;
         this.usuarioNoivaRepository = usuarioNoivaRepository;
         this.passwordEncoder = passwordEncoder;
         this.mercadoPagoService = mercadoPagoService;
         this.asaasService = asaasService;
+        this.presentesPadraoService = presentesPadraoService;
     }
 
     /**
@@ -96,6 +99,7 @@ public class AssinaturaService {
         site.setAtivo(false);
         site.setAssinaturaStatus("PENDENTE");
         site = siteRepository.save(site);
+        presentesPadraoService.garantirPresentesPadrao(site);
 
         UsuarioNoiva usuario = new UsuarioNoiva();
         usuario.setEmail(emailNorm);
@@ -381,6 +385,9 @@ public class AssinaturaService {
         }
 
         siteRepository.save(site);
+        if (site.isAtivo()) {
+            presentesPadraoService.garantirPresentesPadrao(site);
+        }
     }
 
     @Transactional
@@ -405,6 +412,7 @@ public class AssinaturaService {
                 site.setAssinaturaInicio(Instant.now());
             }
             siteRepository.save(site);
+            presentesPadraoService.garantirPresentesPadrao(site);
         } else if (isStatusFalhaPagamento(paymentStatus)) {
             desativarPorFaltaPagamento(site.getId());
         }
@@ -432,6 +440,8 @@ public class AssinaturaService {
             site.setAssinaturaInicio(Instant.now());
         }
         siteRepository.save(site);
+        // Sites criados antes do seed: preenche só se ainda estiver vazio
+        presentesPadraoService.garantirPresentesPadrao(site);
     }
 
     private Site resolverSitePorExternal(String external) {
