@@ -55,7 +55,7 @@ public class MercadoPagoService {
             @Value("${mercadopago.oauth.client-id:}") String oauthClientId,
             @Value("${mercadopago.oauth.client-secret:}") String oauthClientSecret,
             @Value("${mercadopago.oauth.redirect-uri:}") String oauthRedirectUri,
-            @Value("${mercadopago.admin-front-url:https://app.somosloven.com/admin/painel.html}") String adminFrontUrl) {
+            @Value("${mercadopago.admin-front-url:https://app.somosloven.com.br/admin/painel.html}") String adminFrontUrl) {
         this.objectMapper = objectMapper;
         this.accessToken = accessToken == null ? "" : accessToken.trim();
         this.notificationUrl = notificationUrl == null ? "" : notificationUrl.trim();
@@ -68,7 +68,7 @@ public class MercadoPagoService {
         this.oauthClientSecret = oauthClientSecret == null ? "" : oauthClientSecret.trim();
         this.oauthRedirectUri = oauthRedirectUri == null ? "" : oauthRedirectUri.trim();
         this.adminFrontUrl = adminFrontUrl == null || adminFrontUrl.isBlank()
-                ? "https://app.somosloven.com/admin/painel.html"
+                ? "https://app.somosloven.com.br/admin/painel.html"
                 : adminFrontUrl.trim();
         this.restClient = RestClient.builder()
                 .baseUrl("https://api.mercadopago.com")
@@ -225,7 +225,7 @@ public class MercadoPagoService {
 
         String back = !backUrlSuccess.isBlank()
                 ? backUrlSuccess
-                : "https://somosloven.com/sucesso.html";
+                : "https://somosloven.com.br/sucesso.html";
 
         // 1) Preferência: preapproval pending com external_reference (melhor para webhook)
         try {
