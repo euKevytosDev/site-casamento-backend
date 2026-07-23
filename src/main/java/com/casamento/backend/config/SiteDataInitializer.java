@@ -2,6 +2,7 @@ package com.casamento.backend.config;
 
 import com.casamento.backend.model.Site;
 import com.casamento.backend.repository.SiteRepository;
+import com.casamento.backend.service.PresentesPadraoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.env.Environment;
@@ -20,6 +21,9 @@ public class SiteDataInitializer implements CommandLineRunner {
     private SiteRepository siteRepository;
 
     @Autowired
+    private PresentesPadraoService presentesPadraoService;
+
+    @Autowired
     private Environment environment;
 
     @Override
@@ -30,6 +34,8 @@ public class SiteDataInitializer implements CommandLineRunner {
 
         garantirRafaekevin();
         garantirModelo();
+        // Demo Sofia & Lucas: mesmos presentes padrão da assinatura (só se a lista estiver vazia)
+        siteRepository.findBySlug("sofiaelucas").ifPresent(presentesPadraoService::garantirPresentesPadrao);
     }
 
     /** Site vitrine (demo de venda) — só cria se ainda não existir. */
