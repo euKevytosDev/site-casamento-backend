@@ -132,11 +132,14 @@ public class AsaasService {
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("customer", customerId);
-        body.put("billingType", "UNDEFINED");
+        // Cartão obrigatório: no trial a cobrança fica para o 15º dia; no mensal cobra na hora
+        body.put("billingType", "CREDIT_CARD");
         body.put("value", valorMensal);
         body.put("nextDueDate", primeiraCobranca.toString());
         body.put("cycle", "MONTHLY");
-        body.put("description", "Loven — site de casamento (" + slug + ")");
+        body.put("description", usarTrial
+                ? ("Loven — trial " + trialDias + " dias (" + slug + ")")
+                : ("Loven — site de casamento (" + slug + ")"));
         body.put("externalReference", "site:" + siteId);
         if (!backUrlSuccess.isBlank()) {
             Map<String, Object> callback = new LinkedHashMap<>();
