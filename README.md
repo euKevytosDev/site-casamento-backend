@@ -1,159 +1,127 @@
-# Site de Casamento — Backend (API REST)
+# Site de Casamento — Backend
 
-API REST desenvolvida em **Java + Spring Boot** para o site de casamento de Rafaella & Kevin. Gerencia confirmações de presença, lista de presentes, autenticação de administradores e upload de imagens.
+API REST do site de casamento da Rafaella e do Kevin (e da marca Loven). Cuida de confirmação de presença, lista de presentes, login do admin e upload de fotos.
 
-## Links
+Fiz esse back-end porque o front sozinho não dava conta: precisava persistir dados, proteger o painel e servir vários sites de noivas no mesmo domínio.
 
-- API em produção: https://site-casamento-backend-nrfb.onrender.com
-- Front-end: https://eukevytosdev.github.io/site-casamento/
-- Repositório front: [site-casamento](https://github.com/euKevytosDev/site-casamento)
+## Em produção
 
-## Sobre o projeto
+- API: https://site-casamento-backend-nrfb.onrender.com
+- Front (exemplo): https://rafaekevin.com.br/
+- Repositório do front: [site-casamento](https://github.com/euKevytosDev/site-casamento)
 
-Back-end completo com persistência em **PostgreSQL** (Neon), autenticação **JWT** para o painel admin, upload de imagens via **Cloudinary** e deploy automatizado na **Render** com Docker.
+## O que a API faz
+
+- Confirmação de presença (pessoa sozinha ou família inteira)
+- CRUD de presentes, com imagem no Cloudinary
+- Reserva/compra de presente pelo convidado
+- Login do admin com JWT
+- Configuração por site (multi-tenant leve, via header/slug)
+
+Na subida, a aplicação valida se as variáveis de ambiente obrigatórias existem — evita subir “mudo” e só descobrir o erro na primeira requisição.
 
 ## Stack
 
-| Tecnologia | Uso |
-|---|---|
-| Java 17 | Linguagem principal |
-| Spring Boot 3 | Framework da API |
-| Spring Data JPA | Persistência no banco |
-| PostgreSQL (Neon) | Banco de dados |
-| JWT | Autenticação do admin |
-| Cloudinary | Armazenamento de imagens |
-| Maven | Gerenciamento de dependências |
-| Docker + Render | Deploy em produção |
+- Java 17 + Spring Boot 3
+- Spring Data JPA
+- PostgreSQL no Neon
+- JWT no painel admin
+- Cloudinary para imagens
+- Maven + Docker
+- Deploy na Render
 
-## Funcionalidades
-
-- Confirmação de presença (individual e em família)
-- CRUD de presentes com upload de imagem
-- Reserva/compra de presentes pelos convidados
-- Painel admin protegido por login JWT
-- Validação de variáveis de ambiente na inicialização
-
-## Estrutura do projeto
+## Organização do código
 
 ```text
-site-casamento-backend/
-├── src/main/java/com/casamento/backend/
-│   ├── controller/     # Endpoints da API
-│   ├── model/          # Entidades JPA
-│   ├── repository/     # Acesso ao banco
-│   ├── service/        # Regras de negócio
-│   ├── config/         # Segurança, CORS, Cloudinary
-│   └── dto/            # Objetos de transferência
-├── src/main/resources/
-│   ├── application.properties
-│   ├── application-local.properties.example
-│   └── sql/            # Scripts de referência
-├── Dockerfile
-├── render.env.example
-└── teste.http          # Testes manuais da API
+src/main/java/com/casamento/backend/
+├── controller/   # endpoints
+├── model/        # entidades JPA
+├── repository/
+├── service/      # regras de negócio
+├── config/       # segurança, CORS, Cloudinary
+└── dto/
 ```
+
+Separação clássica de camadas. A lógica fica no service; controller só recebe e responde.
 
 ## Endpoints principais
 
-### Públicos (convidados)
+**Público**
 
-| Método | Rota | Descrição |
-|---|---|---|
-| GET | `/api/presenca` | Listar confirmações |
-| POST | `/api/presenca/confirmar-familia` | Confirmar família |
-| GET | `/api/presentes` | Listar presentes disponíveis |
-| POST | `/api/presentes/{id}/comprar` | Reservar presente |
+| Método | Rota | O que faz |
+|--------|------|-----------|
+| GET | `/api/presenca` | Lista confirmações |
+| POST | `/api/presenca/confirmar-familia` | Confirma família |
+| GET | `/api/presentes` | Lista presentes |
+| POST | `/api/presentes/{id}/comprar` | Reserva presente |
+| GET | `/api/health` | Health check (sem bater no banco) |
 
-### Admin (requer JWT)
+**Admin (JWT)**
 
-| Método | Rota | Descrição |
-|---|---|---|
-| POST | `/api/auth/login` | Login do administrador |
-| GET/POST/PUT/DELETE | `/api/admin/presentes` | Gerenciar presentes |
-| GET/DELETE | `/api/admin/presenca` | Gerenciar presenças |
+| Método | Rota | O que faz |
+|--------|------|-----------|
+| POST | `/api/auth/login` | Login |
+| GET/POST/PUT/DELETE | `/api/admin/presentes` | Gerencia presentes |
+| GET/DELETE | `/api/admin/presenca` | Gerencia presenças |
 
-## Variáveis de ambiente
+Tem um `teste.http` na raiz pra ir batendo nos endpoints no VS Code/Cursor.
 
-Copie `application-local.properties.example` → `application-local.properties` (não versionado) ou configure no Render:
+## Rodar local
+
+Precisa de Java 17+, Maven (ou `./mvnw`) e um PostgreSQL (Neon ou local).
+
+```bash
+git clone https://github.com/euKevytosDev/site-casamento-backend.git
+cd site-casamento-backend
+
+cp src/main/resources/application-local.properties.example \
+   src/main/resources/application-local.properties
+# preenche DB, JWT, admin e Cloudinary
+
+./mvnw spring-boot:run
+```
+
+API em `http://localhost:8080`.
+
+### Variáveis importantes
 
 ```env
 DB_URL=jdbc:postgresql://HOST/neondb?sslmode=require
-DB_USERNAME=seu_usuario
-DB_PASSWORD=sua_senha
-
+DB_USERNAME=...
+DB_PASSWORD=...
 JWT_SECRET=chave_com_pelo_menos_32_caracteres
 ADMIN_LOGIN=admin
-ADMIN_PASSWORD=senha_forte_8_ou_mais
-
-CLOUDINARY_CLOUD_NAME=seu_cloud
-CLOUDINARY_API_KEY=sua_key
-CLOUDINARY_API_SECRET=seu_secret
-CLOUDINARY_FOLDER=presentes-casamento
+ADMIN_PASSWORD=senha_forte
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
 ```
 
-Veja também: `render.env.example`
+Referência completa: `render.env.example`.
 
-## Como rodar localmente
+## Deploy (Render)
 
-### Pré-requisitos
-- Java 17+
-- Maven (ou use `./mvnw`)
-- Banco PostgreSQL (Neon ou local)
+Web Service com Docker. As envs vão no painel da Render; o `PORT` ela injeta sozinha.
 
-### Passos
+### UptimeRobot
 
-1. Clone o repositório:
-   ```bash
-   git clone https://github.com/euKevytosDev/site-casamento-backend.git
-   cd site-casamento-backend
-   ```
-
-2. Configure as variáveis:
-   ```bash
-   cp src/main/resources/application-local.properties.example \
-      src/main/resources/application-local.properties
-   ```
-   Preencha com seus dados reais.
-
-3. Execute:
-   ```bash
-   ./mvnw spring-boot:run
-   ```
-
-4. API disponível em `http://localhost:8080`
-
-5. Teste os endpoints com o arquivo `teste.http` (extensão REST Client no VS Code/Cursor).
-
-## Deploy na Render
-
-1. Conecte o repositório GitHub à Render
-2. Tipo: **Web Service** com Docker
-3. Configure todas as variáveis de ambiente
-4. O `PORT` é injetado automaticamente pela Render
-
-## UptimeRobot (acordar só o Render)
-
-Configure o monitor para bater **somente** no health check — **sem** header `X-Site-Id`:
+No free tier da Render o serviço dorme. O monitor deve bater só no health:
 
 ```
 GET https://site-casamento-backend-nrfb.onrender.com/api/health
 ```
 
-Resposta esperada: `{"status":"ok","db":"skipped"}`
+Resposta: `{"status":"ok","db":"skipped"}`
 
-- **Intervalo sugerido:** 14 min (mantém Render quente no free tier)
-- **Não use** `/api/presenca`, `/api/site/config` etc. no monitor — esses endpoints consultam o Neon e consomem compute
-- No **cold start** completo do Render, o boot da API ainda abre o banco uma vez; entre pings só com `/api/health`, o Neon pode suspender
+Intervalo ~14 min. Não use `/api/presenca` ou `/api/site/config` no monitor — esses mexem no Neon e gastam compute à toa.
 
-## Banco de dados
+## Banco
 
-- Provider: [Neon](https://neon.tech) (PostgreSQL serverless)
-- Tabelas criadas automaticamente via `spring.jpa.hibernate.ddl-auto=update`
-- Scripts SQL de referência em `src/main/resources/sql/`
+PostgreSQL serverless no [Neon](https://neon.tech). Tabelas sobem com `ddl-auto=update`. Tem SQL de referência em `src/main/resources/sql/` se precisar montar algo na mão.
 
 ## Autor
 
-**Raian Kevin** — Desenvolvedor Full Stack
+Raian Kevin — Full Stack
 
 - GitHub: [@euKevytosDev](https://github.com/euKevytosDev)
 - Portfólio: [portfolio-raian](https://github.com/euKevytosDev/portfolio-raian)
