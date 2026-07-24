@@ -13,6 +13,7 @@ public class SiteConfigResponse {
     private String nomeNoivo;
     private String nomeCurto;
     private String dataCasamento;
+    private String dataLimiteConfirmacao;
     private String horaCasamento;
     private String diaSemana;
     private String mesExtenso;
@@ -59,6 +60,11 @@ public class SiteConfigResponse {
 
     public String getDataCasamento() { return dataCasamento; }
     public void setDataCasamento(String dataCasamento) { this.dataCasamento = dataCasamento; }
+
+    public String getDataLimiteConfirmacao() { return dataLimiteConfirmacao; }
+    public void setDataLimiteConfirmacao(String dataLimiteConfirmacao) {
+        this.dataLimiteConfirmacao = dataLimiteConfirmacao;
+    }
 
     public String getHoraCasamento() { return horaCasamento; }
     public void setHoraCasamento(String horaCasamento) { this.horaCasamento = horaCasamento; }

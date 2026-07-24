@@ -27,6 +27,8 @@ public class SiteConfigService {
         r.setNomeNoivo(site.getNomeNoivo());
         r.setNomeCurto(site.getNomeCurto());
         r.setDataCasamento(site.getDataCasamento() != null ? site.getDataCasamento().toString() : null);
+        r.setDataLimiteConfirmacao(
+                site.getDataLimiteConfirmacao() != null ? site.getDataLimiteConfirmacao().toString() : null);
         r.setHoraCasamento(site.getHoraCasamento());
         r.setDiaSemana(site.getDiaSemana());
         r.setMesExtenso(site.getMesExtenso());

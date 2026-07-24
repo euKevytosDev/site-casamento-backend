@@ -31,6 +31,10 @@ public class Site {
     @Column(name = "data_casamento")
     private LocalDate dataCasamento;
 
+    /** Prazo para o convidado confirmar presença (RSVP). Null = não exibe aviso. */
+    @Column(name = "data_limite_confirmacao")
+    private LocalDate dataLimiteConfirmacao;
+
     @Column(name = "hora_casamento", length = 10)
     private String horaCasamento;
 
@@ -213,6 +217,11 @@ public class Site {
 
     public LocalDate getDataCasamento() { return dataCasamento; }
     public void setDataCasamento(LocalDate dataCasamento) { this.dataCasamento = dataCasamento; }
+
+    public LocalDate getDataLimiteConfirmacao() { return dataLimiteConfirmacao; }
+    public void setDataLimiteConfirmacao(LocalDate dataLimiteConfirmacao) {
+        this.dataLimiteConfirmacao = dataLimiteConfirmacao;
+    }
 
     public String getHoraCasamento() { return horaCasamento; }
     public void setHoraCasamento(String horaCasamento) { this.horaCasamento = horaCasamento; }

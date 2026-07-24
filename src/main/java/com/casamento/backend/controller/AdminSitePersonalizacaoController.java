@@ -91,6 +91,9 @@ public class AdminSitePersonalizacaoController {
         if (body.containsKey("dataCasamento")) {
             site.setDataCasamento(parseData(body.get("dataCasamento")));
         }
+        if (body.containsKey("dataLimiteConfirmacao")) {
+            site.setDataLimiteConfirmacao(parseData(body.get("dataLimiteConfirmacao")));
+        }
         if (body.containsKey("horaCasamento")) {
             site.setHoraCasamento(blankToNull(asString(body.get("horaCasamento"))));
         }
