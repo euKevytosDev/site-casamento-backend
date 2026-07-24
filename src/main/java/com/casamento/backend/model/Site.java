@@ -173,7 +173,7 @@ public class Site {
     @Column(name = "fonte_nomes", length = 40)
     private String fonteNomes;
 
-    /** PENDENTE | ATIVA | ATRASADA | CANCELADA */
+    /** PENDENTE | TRIAL | ATIVA | ATRASADA | CANCELADA */
     @Column(name = "assinatura_status", length = 30)
     private String assinaturaStatus = "ATIVA";
 
@@ -196,6 +196,10 @@ public class Site {
 
     @Column(name = "assinatura_inicio")
     private java.time.Instant assinaturaInicio;
+
+    /** Fim do período de teste grátis (null se nunca entrou em trial). */
+    @Column(name = "trial_ate")
+    private LocalDate trialAte;
 
     public Site() {
     }
@@ -372,4 +376,7 @@ public class Site {
 
     public java.time.Instant getAssinaturaInicio() { return assinaturaInicio; }
     public void setAssinaturaInicio(java.time.Instant assinaturaInicio) { this.assinaturaInicio = assinaturaInicio; }
+
+    public LocalDate getTrialAte() { return trialAte; }
+    public void setTrialAte(LocalDate trialAte) { this.trialAte = trialAte; }
 }

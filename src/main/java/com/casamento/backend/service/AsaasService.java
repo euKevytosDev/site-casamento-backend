@@ -26,6 +26,7 @@ public class AsaasService {
     private final String backUrlSuccess;
     private final BigDecimal valorMensal;
     private final int permanenciaMinimaMeses;
+    private final int trialDias;
 
     public AsaasService(
             ObjectMapper objectMapper,
@@ -33,12 +34,14 @@ public class AsaasService {
             @Value("${asaas.api-url:https://api.asaas.com}") String apiUrl,
             @Value("${asaas.back-url-success:}") String backUrlSuccess,
             @Value("${asaas.valor-mensal:59.90}") BigDecimal valorMensal,
-            @Value("${asaas.permanencia-minima-meses:0}") int permanenciaMinimaMeses) {
+            @Value("${asaas.permanencia-minima-meses:0}") int permanenciaMinimaMeses,
+            @Value("${asaas.trial-dias:14}") int trialDias) {
         this.objectMapper = objectMapper;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.backUrlSuccess = backUrlSuccess == null ? "" : backUrlSuccess.trim();
         this.valorMensal = valorMensal;
         this.permanenciaMinimaMeses = permanenciaMinimaMeses;
+        this.trialDias = Math.max(0, trialDias);
         String base = (apiUrl == null || apiUrl.isBlank()) ? "https://api.asaas.com" : apiUrl.trim();
         if (base.endsWith("/")) {
             base = base.substring(0, base.length() - 1);
@@ -65,10 +68,15 @@ public class AsaasService {
         return permanenciaMinimaMeses;
     }
 
+    public int getTrialDias() {
+        return trialDias;
+    }
+
     /**
      * Cria (ou reusa) cliente + assinatura MONTHLY UNDEFINEDIFIED e devolve o link da 1ª fatura.
+     * Com trial, a 1ª cobrança fica para daqui a {@link #trialDias} dias.
      *
-     * @return id (subscription), customer_id, init_point (invoiceUrl), status
+     * @return id (subscription), customer_id, init_point (invoiceUrl), status, first_due_date
      */
     public Map<String, String> criarAssinaturaMensal(
             Long siteId,
@@ -77,6 +85,21 @@ public class AsaasService {
             String email,
             String cpfCnpj,
             String subscriptionIdExistente) {
+        return criarAssinaturaMensal(siteId, slug, nomeCliente, email, cpfCnpj, subscriptionIdExistente, false);
+    }
+
+    /**
+     * @param cobrarNaHora se true, ignora trial e agenda a 1ª cobrança para hoje
+     *                     (ex.: trial já usado / assinatura atrasada).
+     */
+    public Map<String, String> criarAssinaturaMensal(
+            Long siteId,
+            String slug,
+            String nomeCliente,
+            String email,
+            String cpfCnpj,
+            String subscriptionIdExistente,
+            boolean cobrarNaHora) {
 
         if (!configurado()) {
             throw new IllegalStateException("Asaas não configurado (ASAAS_API_KEY).");
@@ -102,11 +125,16 @@ public class AsaasService {
 
         String customerId = garantirCliente(nomeCliente, email, cpfNorm, siteId);
 
+        boolean usarTrial = !cobrarNaHora && trialDias > 0;
+        LocalDate primeiraCobranca = usarTrial
+                ? LocalDate.now().plusDays(trialDias)
+                : LocalDate.now();
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("customer", customerId);
         body.put("billingType", "UNDEFINED");
         body.put("value", valorMensal);
-        body.put("nextDueDate", LocalDate.now().toString());
+        body.put("nextDueDate", primeiraCobranca.toString());
         body.put("cycle", "MONTHLY");
         body.put("description", "Loven — site de casamento (" + slug + ")");
         body.put("externalReference", "site:" + siteId);
@@ -133,6 +161,7 @@ public class AsaasService {
         out.put("customer_id", customerId);
         out.put("init_point", invoiceUrl);
         out.put("status", sub.path("status").asText("ACTIVE"));
+        out.put("first_due_date", primeiraCobranca.toString());
         return out;
     }
 

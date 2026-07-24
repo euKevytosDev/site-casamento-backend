@@ -2,6 +2,9 @@ package com.casamento.backend.repository;
 
 import com.casamento.backend.model.Site;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -32,4 +35,6 @@ public interface SiteRepository extends JpaRepository<Site, Long> {
 
     Optional<Site> findFirstByMpPreferenceIdAndAssinaturaStatusOrderByIdDesc(
             String mpPreferenceId, String assinaturaStatus);
+
+    List<Site> findByAssinaturaStatusAndTrialAteBefore(String assinaturaStatus, LocalDate trialAte);
 }

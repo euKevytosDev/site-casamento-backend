@@ -24,12 +24,16 @@ public class AssinaturaController {
     @GetMapping("/plano")
     public Map<String, Object> plano() {
         int permanencia = asaasService.getPermanenciaMinimaMeses();
+        int trialDias = asaasService.getTrialDias();
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("nome", "Site de Casamento");
         out.put("valorMensal", asaasService.getValorMensal());
-        out.put("descricaoMensal", "Plano único — assinatura mensal, cancele quando quiser");
+        out.put("descricaoMensal", trialDias > 0
+                ? "Plano único — " + trialDias + " dias grátis, depois mensal"
+                : "Plano único — assinatura mensal, cancele quando quiser");
         out.put("permanenciaMinimaMeses", permanencia);
         out.put("cancelamentoLivre", permanencia <= 0);
+        out.put("trialDias", trialDias);
         out.put("arrependimentoDias", 7);
         out.put("gateway", "asaas");
         out.put("asaasConfigurado", asaasService.configurado());

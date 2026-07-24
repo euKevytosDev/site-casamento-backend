@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -22,6 +23,8 @@ public class AssinaturaService {
     private final MercadoPagoService mercadoPagoService;
     private final AsaasService asaasService;
     private final PresentesPadraoService presentesPadraoService;
+    private final String sitePublicBaseUrl;
+    private final String adminFrontUrl;
 
     public AssinaturaService(
             SiteRepository siteRepository,
@@ -29,13 +32,21 @@ public class AssinaturaService {
             PasswordEncoder passwordEncoder,
             MercadoPagoService mercadoPagoService,
             AsaasService asaasService,
-            PresentesPadraoService presentesPadraoService) {
+            PresentesPadraoService presentesPadraoService,
+            @org.springframework.beans.factory.annotation.Value("${app.site-public-base-url:https://somosloven.com.br}")
+            String sitePublicBaseUrl,
+            @org.springframework.beans.factory.annotation.Value("${mercadopago.admin-front-url:https://somosloven.com.br/admin/}")
+            String adminFrontUrl) {
         this.siteRepository = siteRepository;
         this.usuarioNoivaRepository = usuarioNoivaRepository;
         this.passwordEncoder = passwordEncoder;
         this.mercadoPagoService = mercadoPagoService;
         this.asaasService = asaasService;
         this.presentesPadraoService = presentesPadraoService;
+        this.sitePublicBaseUrl = sitePublicBaseUrl == null ? "https://somosloven.com.br" : sitePublicBaseUrl.trim();
+        this.adminFrontUrl = adminFrontUrl == null || adminFrontUrl.isBlank()
+                ? "https://somosloven.com.br/admin/"
+                : adminFrontUrl.trim();
     }
 
     /**
@@ -155,13 +166,17 @@ public class AssinaturaService {
             subExistente = null;
         }
 
+        boolean trialJaUsado = "ATRASADA".equalsIgnoreCase(site.getAssinaturaStatus())
+                || (site.getTrialAte() != null && site.getTrialAte().isBefore(LocalDate.now()));
+
         Map<String, String> assinatura = asaasService.criarAssinaturaMensal(
                 site.getId(),
                 site.getSlug(),
                 nomeCliente,
                 emailCobranca,
                 cpf,
-                subExistente);
+                trialJaUsado ? null : subExistente, // atrasada: nova cobrança à vista
+                trialJaUsado);
 
         String subId = assinatura.get("id");
         String customerId = assinatura.get("customer_id");
@@ -174,36 +189,111 @@ public class AssinaturaService {
         site.setMpPaymentId("email:" + emailCobranca);
         site.setMpAssinaturaInitPoint(assinatura.get("init_point"));
         site.setMpAssinaturaStatus(assinatura.getOrDefault("status", "ACTIVE"));
-        site.setAssinaturaStatus("PENDENTE");
-        site.setAtivo(false);
+
+        int trialDias = asaasService.getTrialDias();
+        boolean jaPaga = "ATIVA".equalsIgnoreCase(site.getAssinaturaStatus());
+        if (!jaPaga) {
+            iniciarTrialSeNecessario(site, trialDias, assinatura.get("first_due_date"));
+        }
+
         siteRepository.save(site);
+
+        String base = sitePublicBaseUrl.replaceAll("/$", "");
+        String painel = adminFrontUrl.contains("painel")
+                ? adminFrontUrl.replace("painel.html", "index.html")
+                : (adminFrontUrl.endsWith("/") ? adminFrontUrl : adminFrontUrl + "/");
+        if (!painel.contains("/admin")) {
+            painel = base + "/admin/";
+        }
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("siteId", site.getId());
         out.put("slug", site.getSlug());
         out.put("checkoutUrl", assinatura.get("init_point"));
+        out.put("painelUrl", painel);
+        out.put("siteUrl", base + "/" + site.getSlug());
         out.put("valorMensal", asaasService.getValorMensal());
         out.put("permanenciaMinimaMeses", asaasService.getPermanenciaMinimaMeses());
         out.put("cancelamentoLivre", asaasService.getPermanenciaMinimaMeses() <= 0);
+        out.put("trialDias", trialDias);
+        out.put("trialAte", site.getTrialAte() != null ? site.getTrialAte().toString() : null);
+        out.put("emTrial", "TRIAL".equalsIgnoreCase(site.getAssinaturaStatus()));
         out.put("gateway", "asaas");
-        out.put("mensagem", "Pague a assinatura de R$ "
-                + asaasService.getValorMensal()
-                + "/mês (PIX, boleto ou cartão). Sem fidelidade — cancele quando quiser.");
+        if (trialDias > 0 && "TRIAL".equalsIgnoreCase(site.getAssinaturaStatus())) {
+            out.put("mensagem", "Seus " + trialDias
+                    + " dias grátis começaram! Entre no painel e monte o site. A 1ª cobrança de R$ "
+                    + asaasService.getValorMensal() + " será em "
+                    + (site.getTrialAte() != null ? site.getTrialAte() : "14 dias") + ".");
+        } else {
+            out.put("mensagem", "Pague a assinatura de R$ "
+                    + asaasService.getValorMensal()
+                    + "/mês (PIX, boleto ou cartão). Sem fidelidade — cancele quando quiser.");
+        }
         out.put("modoTeste", asaasService.modoSandbox());
         out.put("retomado", true);
         return out;
     }
 
+    private void iniciarTrialSeNecessario(Site site, int trialDias, String firstDueDateIso) {
+        if (trialDias <= 0) {
+            site.setAssinaturaStatus("PENDENTE");
+            site.setAtivo(false);
+            return;
+        }
+
+        String st = site.getAssinaturaStatus();
+        // Já em trial válido — só garante ativo
+        if ("TRIAL".equalsIgnoreCase(st)
+                && site.getTrialAte() != null
+                && !site.getTrialAte().isBefore(LocalDate.now())) {
+            site.setAtivo(true);
+            return;
+        }
+        // Trial já usado / vencido / atrasado — precisa pagar (sem novo trial)
+        if ("ATRASADA".equalsIgnoreCase(st)
+                || (site.getTrialAte() != null && site.getTrialAte().isBefore(LocalDate.now()))) {
+            site.setAssinaturaStatus("PENDENTE");
+            site.setAtivo(false);
+            return;
+        }
+
+        if (site.getAssinaturaInicio() == null) {
+            site.setAssinaturaInicio(Instant.now());
+        }
+        if (site.getTrialAte() == null) {
+            LocalDate ate = null;
+            if (firstDueDateIso != null && !firstDueDateIso.isBlank()) {
+                try {
+                    ate = LocalDate.parse(firstDueDateIso.trim());
+                } catch (Exception ignored) {
+                    ate = null;
+                }
+            }
+            if (ate == null) {
+                ate = LocalDate.now().plusDays(trialDias);
+            }
+            site.setTrialAte(ate);
+        }
+        site.setAssinaturaStatus("TRIAL");
+        site.setAtivo(true);
+    }
+
     private static boolean siteJaPagoOuAtivo(Site site) {
-        if (site.isAtivo()) {
-            return true;
+        if (site == null) {
+            return false;
         }
         String st = site.getAssinaturaStatus();
-        if (st != null && "ATIVA".equalsIgnoreCase(st)) {
-            return true;
+        if (st != null) {
+            if ("ATIVA".equalsIgnoreCase(st) || "TRIAL".equalsIgnoreCase(st)) {
+                return true;
+            }
+            if ("PENDENTE".equalsIgnoreCase(st)
+                    || "ATRASADA".equalsIgnoreCase(st)
+                    || "CANCELADA".equalsIgnoreCase(st)) {
+                return false;
+            }
         }
-        String mp = site.getMpAssinaturaStatus();
-        return mp != null && ("authorized".equalsIgnoreCase(mp) || "ACTIVE".equalsIgnoreCase(mp));
+        return site.isAtivo();
     }
 
     /** Webhook Asaas — ativa/desativa conforme eventos de cobrança da assinatura. */
@@ -286,10 +376,16 @@ public class AssinaturaService {
             site.setMpAssinaturaStatus("ACTIVE");
             siteRepository.save(site);
         } else if (falha && site.isAtivo()) {
-            // Atraso/estorno só derruba se já estava ativo (renovação)
+            // Atraso/estorno: derruba trial ou renovação já ativa
             desativarPorFaltaPagamento(site.getId());
-        } else if ("PAYMENT_OVERDUE".equals(event) && "PENDENTE".equalsIgnoreCase(site.getAssinaturaStatus())) {
+        } else if ("PAYMENT_OVERDUE".equals(event)
+                && ("PENDENTE".equalsIgnoreCase(site.getAssinaturaStatus())
+                || "TRIAL".equalsIgnoreCase(site.getAssinaturaStatus()))) {
             site.setMpAssinaturaStatus("OVERDUE");
+            if ("TRIAL".equalsIgnoreCase(site.getAssinaturaStatus())) {
+                site.setAtivo(false);
+                site.setAssinaturaStatus("ATRASADA");
+            }
             siteRepository.save(site);
         }
     }
@@ -428,6 +524,23 @@ public class AssinaturaService {
             site.setAssinaturaStatus("ATRASADA");
             siteRepository.save(site);
         });
+    }
+
+    /** Encerra trials vencidos que ainda não pagaram (rede de segurança além do webhook Asaas). */
+    @Transactional
+    public int encerrarTrialsVencidos() {
+        var vencidos = siteRepository.findByAssinaturaStatusAndTrialAteBefore("TRIAL", LocalDate.now());
+        int n = 0;
+        for (Site site : vencidos) {
+            if (slugReservado(site.getSlug())) {
+                continue;
+            }
+            site.setAtivo(false);
+            site.setAssinaturaStatus("ATRASADA");
+            siteRepository.save(site);
+            n++;
+        }
+        return n;
     }
 
     private void ativarSite(Site site, String paymentId) {
